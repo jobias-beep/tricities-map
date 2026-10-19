@@ -348,6 +348,7 @@ body.dragging::after{content:"Drop your spreadsheet to import customers";positio
     <footer>
       <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="impUpdate" checked>Update customers already on the map</label>
       <span style="flex:1"></span>
+      <button class="btn sec2" id="impRetry" type="button" hidden>Try again</button>
       <button class="btn sec2" id="impMissing" type="button" hidden>Download unmatched rows</button>
       <button class="btn sec2" id="impCancel" type="button">Cancel</button>
       <button class="btn" id="impGo" type="button" disabled>Matching…</button>
@@ -389,12 +390,18 @@ const SOURCES=[
    addrField:"SITUS_ADDRESS",
    norm:p=>({pid:"F-"+digits(p.PARCEL_ID_NR),parcel:p.PARCEL_ID_NR,address:p.SITUS_ADDRESS,cityLine:p.SITUS_CITY_NM?titleCase(p.SITUS_CITY_NM)+", WA":"",value:(+p.VALUE_LAND||0)+(+p.VALUE_BLDG||0)||null,link:p.DATA_LINK,county:"Franklin County"})}
 ];
+// County servers sometimes stall: give up after 15s and retry once
+async function fetchJSON(u,tries=2){
+  for(let k=0;k<tries;k++){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),15000);
+    try{const r=await fetch(u,{signal:ac.signal});if(!r.ok)throw new Error("HTTP "+r.status);return await r.json();}
+    catch(e){if(k===tries-1)throw e.name==="AbortError"?new Error("timed out"):e;}
+    finally{clearTimeout(tm);}}
+}
 async function arcQuery(src,params){
   const u=new URL(src.url+"/query");
   const base={outFields:src.fields,outSR:"4326",f:"geojson",returnGeometry:"true"};
   Object.entries({...base,...params}).forEach(([k,v])=>u.searchParams.set(k,v));
-  const r=await fetch(u);if(!r.ok)throw new Error(src.name+" returned "+r.status);
-  const j=await r.json();if(j.error)throw new Error(src.name+": "+(j.error.message||"query failed"));
+  const j=await fetchJSON(u).catch(e=>{throw new Error(src.name+": "+e.message);});if(j.error)throw new Error(src.name+": "+(j.error.message||"query failed"));
   const feats=(j.features||[]).filter(f=>f.geometry).map(f=>({type:"Feature",geometry:f.geometry,properties:src.norm(f.properties||{})}));
   return{feats,more:!!(j.exceededTransferLimit||(j.properties&&j.properties.exceededTransferLimit))};
 }
@@ -1203,8 +1210,10 @@ async function handleSheet(file){
     return{line:hi+2+ix,addr,city:String(val(r,hm.city)),name,phone:String(val(r,hm.phone)),planRaw,plan:parsePlan(planRaw),last:parseDate(hm.lastsvc===undefined?"":r[hm.lastsvc]),group:String(val(r,hm.group)),notes,status:"pending",feat:null,on:true};
   }).filter(Boolean);
   if(!impRows.length){toast("No rows with an address found");return;}
-  openImport(file.name);
-  let i=0;const worker=async()=>{while(i<impRows.length){const r=impRows[i++];try{await matchRow(r);}catch(e){r.status="err";}if(!impRows.includes(r))return;renderImpRow(r);updImpSummary();}};
+  openImport(file.name);runMatch(impRows);
+}
+async function runMatch(rows){
+  let i=0;const worker=async()=>{while(i<rows.length){const r=rows[i++];try{await matchRow(r);}catch(e){r.status="err";}if(!impRows.includes(r))return;renderImpRow(r);updImpSummary();}};
   await Promise.all([worker(),worker(),worker(),worker()]);
 }
 function openImport(fname){
@@ -1231,7 +1240,9 @@ function updImpSummary(){
   const n=impRows.filter(r=>r.on&&(r.status==="ok"||(r.status==="exists"&&upd))).length;
   const b=$("#impGo");b.disabled=!!pend||!n;b.textContent=pend?"Matching…":`Import ${n} customer${n===1?"":"s"}`;
   $("#impMissing").hidden=!!pend||!miss;
+  $("#impRetry").hidden=!!pend||!c("err");
 }
+$("#impRetry").onclick=()=>{const rows=impRows.filter(r=>r.status==="err");rows.forEach(r=>{r.status="pending";renderImpRow(r);});updImpSummary();runMatch(rows);};
 $("#impUpdate").onchange=updImpSummary;
 $("#impClose").onclick=closeImport;$("#impCancel").onclick=closeImport;
 $("#importModal").addEventListener("click",e=>{if(e.target.id==="importModal")closeImport();});
