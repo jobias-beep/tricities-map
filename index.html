@@ -175,6 +175,27 @@ body.card-open .maplibregl-ctrl-top-right{right:394px}
 body.no-ui #rail,body.no-ui #drawer,body.no-ui #top,body.no-ui #tools,body.no-ui #prop,body.no-ui .maplibregl-ctrl-top-right{display:none!important}
 body.drawer-closed #drawer{display:none}
 
+/* Import, groups, drawn lots */
+.drop{border:2px dashed #c3cdd7;border-radius:10px;padding:18px 14px;text-align:center;color:var(--ink-2);cursor:pointer;display:flex;flex-direction:column;gap:4px;align-items:center;background:var(--wash)}
+.drop b{color:var(--ink);font-size:14.5px}
+.drop span{font-size:12.5px}
+.drop:hover,.drop:focus-visible,.drop.over,body.dragging .drop{border-color:var(--accent);background:var(--accent-wash);color:var(--accent);outline:none}
+body.dragging::after{content:"Drop your spreadsheet to import customers";position:fixed;inset:10px;z-index:60;border:3px dashed var(--accent);border-radius:16px;background:rgba(31,95,214,.16);display:flex;align-items:center;justify-content:center;color:#fff;font:800 22px var(--f-body);text-shadow:0 2px 8px rgba(0,0,0,.6);pointer-events:none}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(10,16,24,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-card{width:min(780px,100%);max-height:calc(100% - 32px);display:flex;flex-direction:column;overflow:hidden}
+.modal-card header{padding:16px 18px;border-bottom:1px solid var(--rule);position:relative}
+.modal-card h2{margin:0 44px 4px 0;font-size:19px;font-weight:800}
+.modal-card header p{margin:0;color:var(--ink-2)}
+.modal-card .list{overflow:auto;flex:1;padding:10px;display:flex;flex-direction:column;gap:6px;min-height:0}
+.modal-card footer{border-top:1px solid var(--rule);padding:12px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.imp{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:start;border:1px solid var(--rule);border-radius:8px;padding:10px 12px;cursor:pointer}
+.imp input{margin-top:3px}
+.imp .a,.imp .m{display:block;min-width:0;overflow-wrap:anywhere}
+.imp .a{font-weight:700}
+.imp .m{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+.gbadge{margin-top:8px;border:1px solid var(--rule);background:var(--paper);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink)}
+.gbadge:hover,.gbadge:focus-visible{border-color:var(--accent);outline:none}
+.gbadge i,.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
 @media (max-width:820px){
   :root{--railw:64px}
   #rail{top:auto;bottom:10px;left:10px;right:10px;width:auto;height:auto;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:6px}
@@ -201,11 +222,15 @@ body.drawer-closed #drawer{display:none}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>Delete properties</button>
   <button class="tool" id="tSV" aria-pressed="false" title="Click anywhere to open Google Street View there (V)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M9 21l1-7-2-1 1-5h6l1 5-2 1 1 7"/></svg>Street View</button>
+  <button class="tool" id="tDraw" aria-pressed="false" title="Draw your own property line (L)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18L7 6l10-2 3 11-9 5z"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="7" cy="6" r="1.5" fill="currentColor"/><circle cx="17" cy="4" r="1.5" fill="currentColor"/><circle cx="20" cy="15" r="1.5" fill="currentColor"/></svg>Draw lot</button>
   <div class="rail-sep"></div>
   <button class="tool" id="dList" aria-pressed="true" title="Your customer properties">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>Customers</button>
   <button class="tool" id="dSections" aria-pressed="false" title="Jump to an area">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Sections</button>
+  <button class="tool" id="dGroups" aria-pressed="false" title="Owners and property managers">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><path d="M17 14v6M14 17h6"/></svg>Groups</button>
   <button class="tool" id="dRoute" aria-pressed="false" title="Plan the best order to visit stops">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3.5 3.5 0 000-7H9a3.5 3.5 0 010-7h7"/></svg>Route</button>
   <button class="tool" id="dData" aria-pressed="false" title="Where the property lines come from and when they were updated">
@@ -240,6 +265,11 @@ body.drawer-closed #drawer{display:none}
     <div class="body" id="secBody"></div>
   </section>
 
+  <section class="dv" id="vGroups" hidden>
+    <header><h2>Groups</h2><p>Properties that share an owner or property manager.</p></header>
+    <div class="body" id="grpBody"></div>
+  </section>
+
   <section class="dv" id="vRoute" hidden>
     <header><h2>Route <small id="routeCount"></small></h2><p>Pick the stops for a day and get the best order to drive them.</p></header>
     <div class="body" id="routeBody"></div>
@@ -254,6 +284,15 @@ body.drawer-closed #drawer{display:none}
   <section class="dv" id="vSettings" hidden>
     <header><h2>Settings</h2></header>
     <div class="body">
+      <div class="grp">Import customers</div>
+      <div class="drop" id="dropZone" role="button" tabindex="0" aria-label="Choose a spreadsheet to import">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4"/></svg>
+        <b>Drag a spreadsheet here</b><span>or click to choose a file · .xlsx, .xls or .csv</span>
+      </div>
+      <input type="file" id="sheetFile" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.ods" hidden>
+      <p style="font-size:13px">It needs an <b>Address</b> column. It also reads City, Customer name, Phone, Plan, Last service, Group and Notes. You review every match before anything is added.</p>
+      <div class="btns"><button class="btn sec2" id="tplBtn" type="button">Download template</button></div>
+      <p style="font-size:13px">Records in Word docs, PDFs or on paper? Send them to Claude in chat to turn them into a sheet you can drop here.</p>
       <div class="grp">Backup</div>
       <p>Customers are saved in this browser on this computer. Download a backup now and then, and restore it on another device.</p>
       <div class="btns"><button class="btn sec2" id="exportBtn" type="button">Download backup</button><button class="btn sec2" id="importBtn" type="button">Restore backup</button></div>
@@ -302,6 +341,19 @@ body.drawer-closed #drawer{display:none}
 <div id="zoomHint" class="pillmsg">Zoom in to see property lines</div>
 <div id="loadMsg" class="pillmsg" hidden>Loading property lines…</div>
 <div id="modeBar" hidden><span id="modeTxt"></span><button class="btn red" id="modeAct" type="button" hidden></button><button class="btn ghost" id="modeCancel" type="button">Done</button></div>
+<div id="importModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="impTitle">
+  <div class="modal-card card">
+    <header><button class="close" id="impClose" type="button" aria-label="Close">×</button><h2 id="impTitle">Review import</h2><p id="impSum"></p></header>
+    <div class="list" id="impList"></div>
+    <footer>
+      <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="impUpdate" checked>Update customers already on the map</label>
+      <span style="flex:1"></span>
+      <button class="btn sec2" id="impMissing" type="button" hidden>Download unmatched rows</button>
+      <button class="btn sec2" id="impCancel" type="button">Cancel</button>
+      <button class="btn" id="impGo" type="button" disabled>Matching…</button>
+    </footer>
+  </div>
+</div>
 <div id="tip" hidden></div>
 <div id="toast" hidden></div>
 
@@ -321,14 +373,14 @@ const SOURCES=[
    url:"https://services7.arcgis.com/NURlY7V8UHl6XumF/ArcGIS/rest/services/Parcels_and_Assess_view/FeatureServer/0",
    bbox:[-119.95,45.85,-118.9,46.75],oid:"OBJECTID",
    fields:"Parcel_ID,situs_address,owner_name,year_blt,land_sqft,legal_acres,appraised_val,primary_use,neighborhood_name",
-   addrField:"situs_address",
+   addrField:"situs_address",ownerField:"owner_name",
    norm:p=>{const parts=String(p.situs_address||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
      return{pid:"B-"+p.Parcel_ID,parcel:p.Parcel_ID,address:parts[0]||"",cityLine:parts[1]||"",owner:p.owner_name,year:p.year_blt,lot:p.land_sqft,acres:p.legal_acres,value:p.appraised_val,use:p.primary_use,hood:p.neighborhood_name,county:"Benton County"};}},
   {key:"pasco",name:"City of Pasco GIS",covers:"Pasco city limits",
    url:"https://gis.pasco-wa.gov/gs/rest/services/Planning/ComDev/MapServer/30",
    bbox:[-119.35,46.18,-118.95,46.40],oid:"OBJECTID",
    fields:"PARCELNUMBER,SITUS,TAXPAYER_NAME,YEARBUILT,LOT_SIZE_SF,TOTAL_MARKET_VALUE,BEDROOMS,BATHROOMS,FINAL_AREA,STRUCTURE_TYPE,SUBDIVISION,TaxsifterLink",
-   addrField:"SITUS",
+   addrField:"SITUS",ownerField:"TAXPAYER_NAME",
    norm:p=>({pid:"P-"+digits(p.PARCELNUMBER),parcel:p.PARCELNUMBER,address:p.SITUS,cityLine:"Pasco, WA",owner:p.TAXPAYER_NAME,year:p.YEARBUILT,lot:p.LOT_SIZE_SF,value:p.TOTAL_MARKET_VALUE,beds:p.BEDROOMS,baths:p.BATHROOMS,sqft:p.FINAL_AREA,use:p.STRUCTURE_TYPE,hood:p.SUBDIVISION,link:p.TaxsifterLink,county:"Franklin County"})},
   {key:"wa",name:"Washington State statewide parcels",covers:"Franklin County outside Pasco (Burbank side, county areas)",
    url:"https://services.arcgis.com/jsIt88o09Q0r1j8h/ArcGIS/rest/services/Current_Parcels/FeatureServer/0",
@@ -362,7 +414,7 @@ let customers=LS.get(KEY,{})||{};
 // v1 stored Pasco ids with punctuation; match the new digits-only ids
 Object.keys(customers).forEach(k=>{if(k.startsWith("P-")){const nk="P-"+digits(k.slice(2));if(nk!==k){customers[nk]=customers[k];customers[nk].info.pid=nk;delete customers[k];}}});
 function persist(){const ok=LS.set(KEY,customers);$("#saved").textContent=ok?`${Object.keys(customers).length} customers saved in this browser.`:"Couldn't save in this browser. Download a backup.";}
-const PLANS={once:{label:"One-time",days:0},monthly:{label:"Monthly",days:30},bimonthly:{label:"Every 2 months",days:61},quarterly:{label:"Quarterly",days:91},yearly:{label:"Yearly",days:365}};
+const PLANS={once:{label:"One-time",days:0},monthly:{label:"Monthly",days:30},bimonthly:{label:"Every 2 months",days:61},quarterly:{label:"Quarterly",days:91},semiannual:{label:"Every 6 months",days:182},yearly:{label:"Yearly",days:365}};
 const DAY=864e5;
 const today=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime();};
 const parseDay=s=>{if(!s)return null;const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d).getTime();};
@@ -395,7 +447,9 @@ const map=new maplibregl.Map({
       cust:{type:"geojson",data:EMPTY,promoteId:"pid"},
       custPts:{type:"geojson",data:EMPTY,promoteId:"pid"},
       route:{type:"geojson",data:EMPTY},
-      routePts:{type:"geojson",data:EMPTY}
+      routePts:{type:"geojson",data:EMPTY},
+      lots:{type:"geojson",data:EMPTY,promoteId:"pid"},
+      draw:{type:"geojson",data:EMPTY}
     },
     layers:[
       {id:"sat",type:"raster",source:"sat"},
@@ -407,6 +461,10 @@ const map=new maplibregl.Map({
         paint:{"fill-color":"#ffffff","fill-opacity":["case",["boolean",["feature-state","hover"],false],0.22,0.01]}},
       {id:"parcel-line",type:"line",source:"parcels",minzoom:15,
         paint:{"line-color":"#ffffff","line-opacity":["interpolate",["linear"],["zoom"],15,0.45,17,0.85],"line-width":["interpolate",["linear"],["zoom"],15,0.6,18,1.6]}},
+      {id:"lot-fill",type:"fill",source:"lots",paint:{"fill-color":"#22d3ee","fill-opacity":0.14}},
+      {id:"lot-line",type:"line",source:"lots",paint:{"line-color":"#22d3ee","line-width":["interpolate",["linear"],["zoom"],14,1.2,18,2.6],"line-dasharray":[2,1.2]}},
+      {id:"lot-sel",type:"line",source:"lots",filter:["==",["get","pid"],""],paint:{"line-color":"#ffffff","line-width":4}},
+      {id:"cust-group",type:"line",source:"cust",filter:["has","gcolor"],layout:{"line-join":"round"},paint:{"line-color":["get","gcolor"],"line-width":["interpolate",["linear"],["zoom"],14,3.5,18,8],"line-opacity":0.9}},
       {id:"cust-fill",type:"fill",source:"cust",paint:{"fill-color":["case",["boolean",["feature-state","del"],false],"#e5484d",["get","color"]],"fill-opacity":["case",["boolean",["feature-state","del"],false],0.6,0.38]}},
       {id:"cust-line",type:"line",source:"cust",paint:{"line-color":["case",["boolean",["feature-state","del"],false],"#ffffff",["get","color"]],"line-width":["interpolate",["linear"],["zoom"],14,1.5,18,3.5]}},
       {id:"sel-fill",type:"fill",source:"parcels",filter:["==",["get","pid"],""],paint:{"fill-color":"#1f5fd6","fill-opacity":0.28}},
@@ -427,6 +485,8 @@ const map=new maplibregl.Map({
       {id:"cust-names",type:"symbol",source:"custPts",minzoom:15.5,
         layout:{"text-field":["get","label"],"text-font":["Noto Sans Bold"],"text-size":12,"text-offset":[0,-1.2]},
         paint:{"text-color":"#ffffff","text-halo-color":["get","color"],"text-halo-width":2}},
+      {id:"draw-line",type:"line",source:"draw",filter:["==",["geometry-type"],"LineString"],paint:{"line-color":"#22d3ee","line-width":2.5}},
+      {id:"draw-pts",type:"circle",source:"draw",filter:["==",["geometry-type"],"Point"],paint:{"circle-radius":["case",["get","first"],7,5],"circle-color":["case",["get","first"],"#ffffff","#22d3ee"],"circle-stroke-color":"#16202b","circle-stroke-width":2}},
       {id:"route-pts",type:"circle",source:"routePts",paint:{"circle-radius":11,"circle-color":["case",["get","home"],"#16202b","#ffd23f"],"circle-stroke-color":"#16202b","circle-stroke-width":2}},
       {id:"route-num",type:"symbol",source:"routePts",layout:{"text-field":["get","n"],"text-font":["Noto Sans Bold"],"text-size":12,"text-allow-overlap":true,"icon-allow-overlap":true},paint:{"text-color":["case",["get","home"],"#ffffff","#16202b"]}}
     ]}
@@ -436,7 +496,7 @@ map.addControl(new maplibregl.ScaleControl({unit:"imperial"}),"bottom-left");
 map.on("load",()=>{
   if(map.getPitch()>5)map.setTerrain({source:"dem",exaggeration:1.3});else{setPressed($("#v2d"),$("#v3d"));}
   map.setSky&&map.setSky({"sky-color":"#9cc3e6","horizon-color":"#dfe9f2","fog-color":"#dfe9f2","sky-horizon-blend":0.6,"horizon-fog-blend":0.6});
-  renderCustomers();loadParcels();
+  renderCustomers();renderLots();loadParcels();
 });
 
 /* ---------- Parcel loading in grid cells (pages past the 2,000 cap) ---------- */
@@ -483,9 +543,12 @@ let mode=null;const delSel=new Set();
 function setMode(m){
   if(mode==="del"&&m!=="del"){delSel.forEach(pid=>setDel(pid,false));delSel.clear();}
   mode=mode===m?null:m;
-  [["add","#tAdd"],["del","#tDel"],["sv","#tSV"]].forEach(([k,id])=>$(id).setAttribute("aria-pressed",String(mode===k)));
+  if(mode!=="draw"&&drawPts.length){drawPts=[];updateDraw();}
+  if(mode==="draw")map.doubleClickZoom.disable();else map.doubleClickZoom.enable();
+  [["add","#tAdd"],["del","#tDel"],["sv","#tSV"],["draw","#tDraw"]].forEach(([k,id])=>$(id).setAttribute("aria-pressed",String(mode===k)));
   const bar=$("#modeBar");bar.hidden=!mode;bar.classList.toggle("danger",mode==="del");
-  $("#modeAct").hidden=mode!=="del";
+  $("#modeAct").hidden=!(mode==="del"||mode==="draw");
+  if(mode==="draw"){updateDraw();if(map.getZoom()<16.5)map.easeTo({zoom:17.5});}
   if(mode==="add"){$("#modeTxt").textContent="Click a lot to add it as a customer";if(map.getZoom()<MINZ)map.easeTo({zoom:16.5});}
   if(mode==="sv")$("#modeTxt").textContent="Click any spot to open Street View there";
   if(mode==="del"){updateDelBar();openDrawer("list");if(!Object.keys(customers).length)toast("No customer properties to delete yet");}
@@ -495,11 +558,11 @@ function setDel(pid,on){try{map.setFeatureState({source:"cust",id:pid},{del:on})
 function toggleDel(pid){if(!customers[pid])return;if(delSel.has(pid)){delSel.delete(pid);setDel(pid,false);}else{delSel.add(pid);setDel(pid,true);}updateDelBar();renderList();}
 function updateDelBar(){const n=delSel.size;$("#modeTxt").textContent=n?`${n} propert${n>1?"ies":"y"} selected`:"Click customer properties to select them";
   const b=$("#modeAct");b.disabled=!n;b.textContent=n?`Delete ${n}`:"Delete";delete b.dataset.arm;}
-$("#modeAct").onclick=()=>{const b=$("#modeAct");if(!delSel.size)return;
+$("#modeAct").onclick=()=>{if(mode==="draw"){finishDraw();return;}const b=$("#modeAct");if(!delSel.size)return;
   if(!b.dataset.arm){b.dataset.arm="1";b.textContent=`Confirm delete ${delSel.size}`;setTimeout(()=>{if(b.dataset.arm)updateDelBar();},3500);return;}
   const n=delSel.size;delSel.forEach(pid=>{delete customers[pid];if(selected===pid)select(null);});delSel.clear();persist();renderCustomers();renderList();updateDelBar();toast(`Deleted ${n} propert${n>1?"ies":"y"}`);};
 $("#modeCancel").onclick=()=>setMode(mode);
-$("#tAdd").onclick=()=>setMode("add");$("#tDel").onclick=()=>setMode("del");$("#tSV").onclick=()=>setMode("sv");
+$("#tAdd").onclick=()=>setMode("add");$("#tDel").onclick=()=>setMode("del");$("#tSV").onclick=()=>setMode("sv");$("#tDraw").onclick=()=>setMode("draw");
 
 /* ---------- Hover + click ---------- */
 let hoverId=null;const tip=$("#tip");
@@ -513,7 +576,8 @@ map.on("mousemove","parcel-fill",e=>{
 map.on("mouseleave","parcel-fill",()=>{if(hoverId)map.setFeatureState({source:"parcels",id:hoverId},{hover:false});hoverId=null;if(!mode)map.getCanvas().style.cursor="";tip.hidden=true;});
 map.on("click",e=>{
   if(mode==="sv"){openStreetView(e.lngLat.lat,e.lngLat.lng);return;}
-  const hits=map.queryRenderedFeatures(e.point,{layers:["cust-fill","cust-pts","parcel-fill"]});
+  if(mode==="draw"){addDrawPt(e);return;}
+  const hits=map.queryRenderedFeatures(e.point,{layers:["cust-fill","cust-pts","lot-fill","parcel-fill"]});
   if(mode==="del"){const h=hits.find(x=>x.layer.id!=="parcel-fill");if(h)toggleDel(h.properties.pid);return;}
   if(!hits.length)return;
   const pid=hits[0].properties.pid;
@@ -535,11 +599,11 @@ $("#clearKey").onclick=()=>{gkey="";$("#gkey").value="";LS.set("tcpm.gkey","");t
 
 /* ---------- Selection + property card ---------- */
 let selected=null,svOpen=false;
-function featureFor(pid){return parcels.get(pid)||(customers[pid]&&{type:"Feature",geometry:customers[pid].geom,properties:customers[pid].info});}
+function featureFor(pid){return (customLots[pid]&&customLots[pid])||parcels.get(pid)||(customers[pid]&&{type:"Feature",geometry:customers[pid].geom,properties:customers[pid].info});}
 function select(pid){
   if(pid!==selected)svOpen=false;
   selected=pid;
-  ["sel-fill","sel-line","sel-line2"].forEach(l=>map.setFilter(l,["==",["get","pid"],pid||""]));
+  ["sel-fill","sel-line","sel-line2","lot-sel"].forEach(l=>map.setFilter(l,["==",["get","pid"],pid||""]));
   if(!pid){$("#prop").hidden=true;document.body.classList.remove("card-open");renderList();return;}
   const f=featureFor(pid);if(!f)return;
   renderCard(f.properties,f.geometry);$("#prop").hidden=false;document.body.classList.add("card-open");renderList();
@@ -552,6 +616,7 @@ function addCustomer(pid){
 const money=v=>v?"$"+Math.round(+v).toLocaleString():"—";
 const num=v=>v||v===0?(+v).toLocaleString():"—";
 function cityOf(p){
+  if(p.custom)return p.cityLine||"Drawn by you";
   if(p.cityLine)return p.cityLine.replace(/^(.*?),/,(m,c)=>titleCase(c)+",");
   return p.county+", WA";
 }
@@ -563,15 +628,16 @@ function renderCard(p,geom){
   let h=`<div class="hero"><button class="close" id="closeCard" aria-label="Close">×</button>
     <div class="eyebrow">${esc(p.county)}${c?` · <span class="pill p-${st.key}">${esc(st.label)}</span>`:""}</div>
     <h3>${esc(p.address?titleCase(p.address):"No street address on file")}</h3>
-    <div class="city">${esc(cityOf(p))}</div>
-    <div class="value"><b>${money(p.value)}</b><span>${p.county==="Benton County"?"appraised value":"total market value"}</span></div></div>
+    <div class="city">${esc(cityOf(p))}</div>${c&&c.group&&groups[c.group]?`<button class="gbadge" id="gBadge" type="button"><i style="background:${groups[c.group].color}"></i>${esc(groups[c.group].name)}</button>`:""}
+    ${p.custom?"":`<div class="value"><b>${money(p.value)}</b><span>${p.county==="Benton County"?"appraised value":"total market value"}</span></div>`}</div>
     <div class="views">
       <button class="vbtn" id="svBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2.5"/><path d="M9 21l1-7-2-1 1-5h6l1 5-2 1 1 7"/></svg>${gkey?(svOpen?"Hide Street View":"Street View"):"Street View ↗"}</button>
       <a class="vbtn" href="${earthUrl(lat,lng)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>Google Earth 3D ↗</a>
     </div>${svBlock}
-    <div class="facts">${facts.map(([k,v])=>`<div class="fact"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div>
-    <div class="meta"><div>Owner on record: <b>${esc(p.owner?titleCase(p.owner):"—")}</b></div>
+    ${p.custom?"":`<div class="facts">${facts.map(([k,v])=>`<div class="fact"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div>`}
+    <div class="meta"><div>Owner on record: <b>${esc(p.owner?titleCase(p.owner):"—")}</b>${p.owner?` <button class="lnk" id="ownerFind" type="button">Find their other properties</button>`:""}</div>
     <div class="mono">Parcel ${esc(p.parcel)}</div>${p.link?`<div><a href="${esc(p.link)}" target="_blank" rel="noopener">Open county record ↗</a></div>`:""}</div>`;
+  if(p.custom)h+=lotEditorHtml(p);
   if(!c){
     h+=`<div class="svc"><h4>Not a customer yet</h4><div class="btns"><button class="btn" id="addCust" type="button">Add as customer</button></div></div>`;
   }else{
@@ -584,13 +650,18 @@ function renderCard(p,geom){
       <div class="two"><div class="f"><label for="cPlan">Plan</label><select id="cPlan">${Object.entries(PLANS).map(([k,v])=>`<option value="${k}"${c.plan===k?" selected":""}>${v.label}</option>`).join("")}</select></div>
       <div class="f"><label for="cLast">Last service</label><input id="cLast" type="date" value="${esc(c.last)}"></div></div>
       <div class="f"><label for="cNotes">Notes</label><textarea id="cNotes" placeholder="Pests treated, products used, gate code, dog in yard…">${esc(c.notes)}</textarea></div>
+      ${groupFieldHtml(c)}
       <div class="btns"><button class="btn" id="svcToday" type="button">Serviced today</button><button class="btn sec2" id="saveCust" type="button">Save changes</button><button class="btn warn" id="rmCust" type="button">Remove</button></div></div>`;
   }
   $("#propBody").innerHTML=h;
   $("#closeCard").onclick=()=>select(null);
+  if(p.custom)bindLotEditor(p);
+  const gb=$("#gBadge");if(gb)gb.onclick=()=>{activeGroup=c.group;ownHits=[];openDrawer("groups");showGroupOnMap(c.group);};
+  const of=$("#ownerFind");if(of)of.onclick=()=>{ownTerm=p.owner;ownHits=[];activeGroup=c&&c.group&&groups[c.group]?c.group:null;openDrawer("groups");const f=document.querySelector("#grpBody form.savebox");f&&f.requestSubmit();};
   $("#svBtn").onclick=()=>{if(!gkey){openStreetView(lat,lng);return;}svOpen=!svOpen;renderCard(p,geom);};
   if(!c){$("#addCust").onclick=()=>addCustomer(p.pid);return;}
-  const read=()=>({name:$("#cName").value.trim(),phone:$("#cPhone").value.trim(),plan:$("#cPlan").value,last:$("#cLast").value,notes:$("#cNotes").value.trim()});
+  const read=()=>({name:$("#cName").value.trim(),phone:$("#cPhone").value.trim(),plan:$("#cPlan").value,last:$("#cLast").value,notes:$("#cNotes").value.trim(),group:readGroup()});
+  const gs=$("#cGroup");gs.onchange=()=>{$("#cGroupNew").hidden=gs.value!=="__new";if(gs.value==="__new")$("#cGroupNew").focus();};
   const after=m=>{persist();renderCustomers();renderCard(p,geom);renderList();toast(m);};
   $("#saveCust").onclick=()=>{Object.assign(customers[p.pid],read());after("Saved");};
   $("#svcToday").onclick=()=>{Object.assign(customers[p.pid],read(),{last:isoDay(Date.now())});after("Marked serviced today");};
@@ -610,7 +681,8 @@ function renderCustomers(){
   const polys=[],pts=[];
   Object.entries(customers).forEach(([pid,c])=>{
     const color=STATUS_COLOR[statusOf(c).key];
-    polys.push({type:"Feature",geometry:c.geom,properties:{pid,color}});
+    const gc=c.group&&groups[c.group]?groups[c.group].color:null;
+    polys.push({type:"Feature",geometry:c.geom,properties:gc?{pid,color,gcolor:gc}:{pid,color}});
     const[cx,cy]=centroid(c.geom);
     pts.push({type:"Feature",geometry:{type:"Point",coordinates:[cx,cy]},properties:{pid,color,label:c.name||titleCase(c.info.address||"Customer")}});
   });
@@ -636,7 +708,7 @@ function renderList(){
   items.forEach(({pid,c,st})=>{
     const li=document.createElement("li");li.className="row"+(pid===selected?" sel":"")+(delSel.has(pid)?" del":"");li.tabIndex=0;
     li.innerHTML=`<span class="addr">${esc(titleCase(c.info.address||"No address"))}</span><span class="pill p-${st.key}">${esc(st.label)}</span>
-      <span class="who">${esc(c.name||"Name not added")} · ${esc((PLANS[c.plan]||PLANS.quarterly).label)}</span><span class="when">${mode==="del"?(delSel.has(pid)?"Selected":"Click to select"):(st.next?"Next "+esc(fmtDay(st.next)):"")}</span>`;
+      <span class="who">${esc(c.name||"Name not added")}${c.group&&groups[c.group]?" · "+esc(groups[c.group].name):""} · ${esc((PLANS[c.plan]||PLANS.quarterly).label)}</span><span class="when">${mode==="del"?(delSel.has(pid)?"Selected":"Click to select"):(st.next?"Next "+esc(fmtDay(st.next)):"")}</span>`;
     const go=()=>{if(mode==="del"){toggleDel(pid);return;}flyToPid(pid);select(pid);};li.onclick=go;li.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();go();}};
     ul.appendChild(li);
   });
@@ -688,13 +760,13 @@ function renderData(){
 }
 
 /* ---------- Drawer + hide UI ---------- */
-const VIEWS={list:["#vList","#dList"],sections:["#vSections","#dSections"],route:["#vRoute","#dRoute"],data:["#vData","#dData"],settings:["#vSettings","#dSettings"]};
+const VIEWS={list:["#vList","#dList"],groups:["#vGroups","#dGroups"],sections:["#vSections","#dSections"],route:["#vRoute","#dRoute"],data:["#vData","#dData"],settings:["#vSettings","#dSettings"]};
 let view=LS.get("tcpm.drawer","list");
 function openDrawer(v,toggle){
   if(toggle&&v===view&&!document.body.classList.contains("drawer-closed")){document.body.classList.add("drawer-closed");$(VIEWS[v][1]).setAttribute("aria-pressed","false");LS.set("tcpm.drawer","");return;}
   view=v;document.body.classList.remove("drawer-closed");
   Object.entries(VIEWS).forEach(([k,[pane,btn]])=>{$(pane).hidden=k!==v;$(btn).setAttribute("aria-pressed",String(k===v));});
-  if(v==="sections")renderSections();if(v==="route")renderRoute();if(v==="data")renderData();if(v==="settings")persist();
+  if(v==="sections")renderSections();if(v==="route")renderRoute();if(v==="groups")renderGroups();if(v==="data")renderData();if(v==="settings")persist();
   LS.set("tcpm.drawer",v);
 }
 Object.entries(VIEWS).forEach(([k,[,btn]])=>$(btn).onclick=()=>openDrawer(k,true));
@@ -757,7 +829,7 @@ $("#bOff").onclick=()=>{setPressed($("#bOff"),$("#bOn"));map.setLayoutProperty("
 
 /* ---------- Backup / restore ---------- */
 $("#exportBtn").onclick=()=>{
-  const blob=new Blob([JSON.stringify({app:"tricities-property-map",version:2,saved:new Date().toISOString(),customers,sections:mySecs},null,1)],{type:"application/json"});
+  const blob=new Blob([JSON.stringify({app:"tricities-property-map",version:2,saved:new Date().toISOString(),customers,sections:mySecs,lots:customLots,groups},null,1)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`customers-backup-${isoDay(Date.now())}.json`;document.body.appendChild(a);a.click();a.remove();
   toast("Backup file downloaded");
 };
@@ -766,6 +838,8 @@ $("#importFile").onchange=async e=>{
   const file=e.target.files[0];if(!file)return;
   try{const j=JSON.parse(await file.text());if(!j.customers)throw 0;customers={...customers,...j.customers};
     if(Array.isArray(j.sections)){const names=new Set(mySecs.map(s=>s.n));j.sections.forEach(s=>{if(!names.has(s.n))mySecs.push(s);});LS.set("tcpm.sections",mySecs);}
+    if(j.lots&&typeof j.lots==="object"){customLots={...customLots,...j.lots};saveLots();renderLots();}
+    if(j.groups&&typeof j.groups==="object"){groups={...groups,...j.groups};saveGroups();}
     persist();renderCustomers();renderList();toast(`Restored ${Object.keys(j.customers).length} customers`);}
   catch(err){toast("That file isn't a customer backup from this map.");}
   e.target.value="";
@@ -881,14 +955,326 @@ function drawRoute(ro){
   map.getSource("routePts").setData({type:"FeatureCollection",features:pts});
 }
 
+/* ---------- Helpers ---------- */
+const fitPad=()=>innerWidth<820?40:{top:90,bottom:90,left:460,right:document.body.classList.contains("card-open")?440:90};
+function dl(text,type,name){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();}
+function boundsOf(pids){const b=new maplibregl.LngLatBounds();pids.forEach(pid=>{const f=featureFor(pid);if(!f)return;const[,,bb]=centroid(f.geometry);b.extend([bb[0],bb[1]]);b.extend([bb[2],bb[3]]);});return b;}
+
+/* ---------- Drawn lots ---------- */
+let customLots=LS.get("tcpm.lots",{})||{};
+function saveLots(){LS.set("tcpm.lots",customLots);}
+function renderLots(){if(map.getSource("lots"))map.getSource("lots").setData({type:"FeatureCollection",features:Object.values(customLots)});}
+let drawPts=[];
+function updateDraw(){
+  if(map.getSource("draw")){
+    const f=[];
+    if(drawPts.length>1)f.push({type:"Feature",properties:{},geometry:{type:"LineString",coordinates:drawPts.length>2?[...drawPts,drawPts[0]]:drawPts}});
+    drawPts.forEach((p,i)=>f.push({type:"Feature",properties:{first:i===0},geometry:{type:"Point",coordinates:p}}));
+    map.getSource("draw").setData({type:"FeatureCollection",features:f});
+  }
+  if(mode==="draw"){
+    $("#modeTxt").textContent=drawPts.length<3?`Click each corner of the lot (${drawPts.length} placed)`:`${drawPts.length} corners · click the first corner or Finish`;
+    const b=$("#modeAct");b.hidden=false;b.disabled=drawPts.length<3;b.textContent="Finish lot";delete b.dataset.arm;
+  }
+}
+function addDrawPt(e){
+  if(drawPts.length>=3){const a=map.project(drawPts[0]);if(Math.hypot(a.x-e.point.x,a.y-e.point.y)<14){finishDraw();return;}}
+  drawPts.push([e.lngLat.lng,e.lngLat.lat]);updateDraw();
+}
+function finishDraw(){
+  if(drawPts.length<3){toast("Place at least 3 corners");return;}
+  const pid="C-"+Date.now().toString(36);
+  customLots[pid]={type:"Feature",geometry:{type:"Polygon",coordinates:[[...drawPts,drawPts[0]]]},
+    properties:{pid,custom:true,address:"",cityLine:"",county:"Your drawn lot",parcel:"Custom lot",created:isoDay(Date.now())}};
+  saveLots();drawPts=[];setMode("draw");renderLots();select(pid);toast("Lot saved. Give it a name or address.");
+  setTimeout(()=>{const n=$("#lotAddr");n&&n.focus();},60);
+}
+function lotEditorHtml(p){return `<div class="svc"><h4>Your drawn lot</h4>
+  <div class="f"><label for="lotAddr">Name or address</label><input id="lotAddr" type="text" value="${esc(p.address)}" placeholder="e.g. 1450 Jadwin Ave, or Back pasture"></div>
+  <div class="f"><label for="lotCity">City</label><input id="lotCity" type="text" value="${esc(p.cityLine)}" placeholder="e.g. Richland, WA"></div>
+  <div class="btns"><button class="btn sec2" id="lotSave" type="button">Save lot</button><button class="btn warn" id="lotDel" type="button">Delete lot</button></div></div>`;}
+function bindLotEditor(p){
+  $("#lotSave").onclick=()=>{const L=customLots[p.pid];if(!L)return;
+    L.properties.address=$("#lotAddr").value.trim();L.properties.cityLine=$("#lotCity").value.trim();saveLots();renderLots();
+    if(customers[p.pid]){customers[p.pid].info={...L.properties};persist();renderCustomers();renderList();}
+    renderCard(L.properties,L.geometry);toast("Lot saved");};
+  const d=$("#lotDel");d.onclick=()=>{
+    if(!d.dataset.arm){d.dataset.arm="1";d.textContent=customers[p.pid]?"This also removes the customer. Click again":"Click again to delete";
+      setTimeout(()=>{if(d.isConnected){delete d.dataset.arm;d.textContent="Delete lot";}},3500);return;}
+    delete customLots[p.pid];saveLots();renderLots();
+    if(customers[p.pid]){delete customers[p.pid];persist();renderCustomers();renderList();}
+    select(null);toast("Lot deleted");};
+}
+
+/* ---------- Groups (owners and property managers) ---------- */
+let groups=LS.get("tcpm.groups",{})||{};
+const GCOLORS=["#a855f7","#14b8a6","#f97316","#ec4899","#84cc16","#06b6d4","#eab308","#6366f1"];
+function saveGroups(){LS.set("tcpm.groups",groups);}
+function makeGroup(name,kind){const gid="G-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  groups[gid]={name,kind:kind||"Owner",contact:"",phone:"",notes:"",color:GCOLORS[Object.keys(groups).length%GCOLORS.length]};saveGroups();return gid;}
+function groupByName(name){const n=String(name).trim().toLowerCase();return Object.keys(groups).find(g=>groups[g].name.trim().toLowerCase()===n);}
+function membersOf(gid){return Object.keys(customers).filter(pid=>customers[pid].group===gid);}
+function gStats(gid){const st=membersOf(gid).map(pid=>statusOf(customers[pid]).key);return{n:st.length,over:st.filter(s=>s==="over").length,due:st.filter(s=>s==="due").length};}
+function groupFieldHtml(c){return `<div class="f"><label for="cGroup">Owner / property manager group</label><select id="cGroup"><option value="">No group</option>${Object.entries(groups).sort((a,b)=>a[1].name.localeCompare(b[1].name)).map(([g,v])=>`<option value="${g}"${c.group===g?" selected":""}>${esc(v.name)}</option>`).join("")}<option value="__new">+ New group…</option></select><input id="cGroupNew" type="text" placeholder="New group name, e.g. Columbia Rentals" hidden style="margin-top:6px"></div>`;}
+function readGroup(){const s=$("#cGroup");if(!s)return "";if(s.value==="__new"){const n=$("#cGroupNew").value.trim();if(!n)return "";return groupByName(n)||makeGroup(n,"Owner");}return s.value;}
+function showGroupOnMap(gid,force){const ms=membersOf(gid);if(!ms.length){if(force)toast("No properties in this group yet");return;}map.fitBounds(boundsOf(ms),{padding:fitPad(),maxZoom:18});}
+let activeGroup=null,ownTerm="",ownHits=[],ownSel=new Set(),ownBusy=false;
+function propRow(pid){const c=customers[pid],st=statusOf(c);const r=document.createElement("div");r.className="row"+(pid===selected?" sel":"");r.tabIndex=0;r.setAttribute("role","button");
+  r.innerHTML=`<span class="addr">${esc(titleCase(c.info.address||"No address"))}</span><span class="pill p-${st.key}">${esc(st.label)}</span><span class="who">${esc(c.name||"Name not added")}</span><span class="when">${st.next?"Next "+esc(fmtDay(st.next)):""}</span>`;
+  const go=()=>{flyToPid(pid);select(pid);};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter")go();};return r;}
+function renderGroups(){
+  const body=$("#grpBody");body.replaceChildren();
+  if(activeGroup&&!groups[activeGroup])activeGroup=null;
+  if(!activeGroup){
+    const f=document.createElement("form");f.className="f";
+    f.innerHTML=`<label for="gName">New group</label><input type="text" id="gName" placeholder="Owner or property manager name" maxlength="60">
+      <div class="two"><select id="gKind" aria-label="Group type"><option>Owner</option><option>Property manager</option><option>Other</option></select><button class="btn" type="submit">Create group</button></div>`;
+    f.onsubmit=e=>{e.preventDefault();const n=$("#gName").value.trim();if(!n){$("#gName").focus();return;}const ex=groupByName(n);activeGroup=ex||makeGroup(n,$("#gKind").value);renderGroups();toast(ex?"That group already exists":"Group created");};
+    body.appendChild(f);
+    const ids=Object.keys(groups).sort((a,b)=>groups[a].name.localeCompare(groups[b].name));
+    if(!ids.length){const e=document.createElement("div");e.className="empty";e.innerHTML="<b>No groups yet.</b> Group properties that share an owner or property manager. Create one above, choose a group in any customer's card, or search county records by owner name below.";body.appendChild(e);}
+    else{const h=document.createElement("div");h.className="grp";h.textContent="Your groups";body.appendChild(h);}
+    ids.forEach(gid=>{const g=groups[gid],s=gStats(gid);const r=document.createElement("div");r.className="row";r.tabIndex=0;r.setAttribute("role","button");
+      r.innerHTML=`<span class="addr" style="display:flex;align-items:center;gap:8px"><i class="dot" style="background:${g.color}"></i>${esc(g.name)}</span>${s.over?`<span class="pill p-over">${s.over} overdue</span>`:s.due?`<span class="pill p-due">${s.due} due soon</span>`:"<span></span>"}<span class="who">${esc(g.kind)}${g.contact?" · "+esc(g.contact):""}</span><span class="when">${s.n} propert${s.n===1?"y":"ies"}</span>`;
+      const go=()=>{activeGroup=gid;ownHits=[];renderGroups();showGroupOnMap(gid);};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter")go();};body.appendChild(r);});
+    ownerBlock(body,null);return;
+  }
+  const gid=activeGroup,g=groups[gid];
+  const back=document.createElement("button");back.className="lnk";back.type="button";back.textContent="← All groups";back.style.alignSelf="flex-start";back.onclick=()=>{activeGroup=null;ownHits=[];renderGroups();};body.appendChild(back);
+  const form=document.createElement("div");form.style.cssText="display:flex;flex-direction:column;gap:10px";
+  form.innerHTML=`<div class="f"><label for="gEName"><span class="dot" style="background:${g.color};margin-right:6px"></span>Group name</label><input id="gEName" type="text" value="${esc(g.name)}"></div>
+    <div class="two"><div class="f"><label for="gEKind">Type</label><select id="gEKind">${["Owner","Property manager","Other"].map(k=>`<option${g.kind===k?" selected":""}>${k}</option>`).join("")}</select></div>
+    <div class="f"><label for="gEPhone">Phone</label><input id="gEPhone" type="text" value="${esc(g.phone)}" placeholder="(509) 555-0100"></div></div>
+    <div class="f"><label for="gEContact">Contact person</label><input id="gEContact" type="text" value="${esc(g.contact)}" placeholder="Who you talk to"></div>
+    <div class="f"><label for="gENotes">Notes</label><textarea id="gENotes" placeholder="Billing, access, how they like to be contacted…">${esc(g.notes)}</textarea></div>
+    <div class="btns"><button class="btn" id="gSave" type="button">Save group</button><button class="btn sec2" id="gShow" type="button">Show on map</button><button class="btn warn" id="gDel" type="button">Delete group</button></div>`;
+  body.appendChild(form);
+  $("#gSave").onclick=()=>{Object.assign(g,{name:$("#gEName").value.trim()||g.name,kind:$("#gEKind").value,phone:$("#gEPhone").value.trim(),contact:$("#gEContact").value.trim(),notes:$("#gENotes").value.trim()});saveGroups();renderGroups();renderList();if(selected)select(selected);toast("Group saved");};
+  $("#gShow").onclick=()=>showGroupOnMap(gid,true);
+  const del=$("#gDel");del.onclick=()=>{
+    if(!del.dataset.arm){del.dataset.arm="1";del.textContent="Click again (properties stay as customers)";setTimeout(()=>{if(del.isConnected){delete del.dataset.arm;del.textContent="Delete group";}},3500);return;}
+    membersOf(gid).forEach(pid=>{customers[pid].group="";});delete groups[gid];saveGroups();persist();activeGroup=null;renderCustomers();renderList();renderGroups();if(selected)select(selected);toast("Group deleted");};
+  const ms=membersOf(gid);
+  const h=document.createElement("div");h.className="grp";h.textContent=`Properties (${ms.length})`;body.appendChild(h);
+  if(!ms.length){const e=document.createElement("div");e.className="empty";e.textContent="No properties in this group yet. Open a customer's card and choose this group, or search county records by owner name below.";body.appendChild(e);}
+  const order={over:0,due:1,new:2,ok:3,done:4};
+  ms.sort((a,b)=>order[statusOf(customers[a]).key]-order[statusOf(customers[b]).key]).forEach(pid=>body.appendChild(propRow(pid)));
+  ownerBlock(body,gid);
+}
+async function ownerSearch(term){
+  const t=term.toUpperCase().replace(/[^A-Z0-9 &.,-]/g," ").replace(/\s+/g," ").trim();
+  const srcs=SOURCES.filter(s=>s.ownerField);
+  const res=await Promise.allSettled(srcs.map(s=>arcQuery(s,{where:`UPPER(${s.ownerField}) LIKE '%${t}%'`,resultRecordCount:"200"})));
+  if(res.every(r=>r.status==="rejected"))throw new Error("offline");
+  const seen=new Set();return res.flatMap(r=>r.status==="fulfilled"?r.value.feats:[]).filter(f=>{if(seen.has(f.properties.pid))return false;seen.add(f.properties.pid);return true;});
+}
+function ownerBlock(body,gid){
+  const h=document.createElement("div");h.className="grp";h.textContent="Find properties by owner on record";body.appendChild(h);
+  const p=document.createElement("p");p.style.fontSize="13px";p.textContent="Searches Benton County and Pasco ownership records. Franklin County records outside Pasco don't list owners.";body.appendChild(p);
+  const f=document.createElement("form");f.className="savebox";
+  f.innerHTML=`<input type="text" id="ownQ" placeholder="Owner name, e.g. Smith Properties" aria-label="Owner name"><button class="btn" type="submit"${ownBusy?" disabled":""}>${ownBusy?"Searching…":"Search"}</button>`;
+  body.appendChild(f);const q=f.querySelector("#ownQ");q.value=ownTerm||(gid?groups[gid].name:"");
+  f.onsubmit=async e=>{e.preventDefault();const t=q.value.trim();if(t.length<3){toast("Type at least 3 letters of the owner name");return;}
+    ownTerm=t;ownBusy=true;ownHits=[];ownSel.clear();renderGroups();
+    try{ownHits=await ownerSearch(t);}catch(err){toast("Couldn't reach county records. Check your connection.");}
+    ownBusy=false;ownHits.forEach(ft=>{const c=customers[ft.properties.pid];if(!(gid&&c&&c.group===gid))ownSel.add(ft.properties.pid);});
+    renderGroups();if(!ownHits.length)toast("No properties found under that owner name");};
+  if(!ownHits.length)return;
+  const box=document.createElement("div");box.style.cssText="display:flex;flex-direction:column;gap:6px";
+  const add=document.createElement("button");add.className="btn";add.type="button";
+  const updBtn=()=>{add.textContent=`Add ${ownSel.size} to ${gid?"this group":"group"}`;add.disabled=!ownSel.size;};
+  ownHits.forEach(ft=>{const pr=ft.properties;const c=customers[pr.pid];const inG=!!(gid&&c&&c.group===gid);
+    const lab=document.createElement("label");lab.className="row";lab.style.gridTemplateColumns="auto 1fr auto";lab.style.alignItems="center";
+    const cb=document.createElement("input");cb.type="checkbox";cb.checked=ownSel.has(pr.pid);cb.disabled=inG;cb.onchange=()=>{cb.checked?ownSel.add(pr.pid):ownSel.delete(pr.pid);updBtn();};
+    const t=document.createElement("span");t.className="addr";t.style.whiteSpace="normal";t.textContent=(pr.address?titleCase(pr.address):"No street address")+" · "+cityOf(pr)+(pr.owner?" · "+titleCase(pr.owner):"");
+    const tag=document.createElement("span");tag.className="pill "+(inG?"p-ok":c?"p-due":"p-new");tag.textContent=inG?"In group":c?"Customer":"New";
+    lab.append(cb,t,tag);box.appendChild(lab);});
+  body.appendChild(box);
+  const foot=document.createElement("div");foot.className="btns";let tgt=null;
+  if(!gid){tgt=document.createElement("select");tgt.setAttribute("aria-label","Add to which group");
+    tgt.innerHTML=`<option value="__new">New group: ${esc(titleCase(ownTerm))}</option>`+Object.entries(groups).map(([g,v])=>`<option value="${g}">${esc(v.name)}</option>`).join("");foot.appendChild(tgt);}
+  foot.appendChild(add);body.appendChild(foot);updBtn();
+  add.onclick=()=>{let g=gid;if(!g)g=tgt.value==="__new"?(groupByName(titleCase(ownTerm))||makeGroup(titleCase(ownTerm),"Owner")):tgt.value;
+    let n=0;ownHits.forEach(ft=>{const pr=ft.properties;if(!ownSel.has(pr.pid))return;n++;
+      if(customers[pr.pid])customers[pr.pid].group=g;
+      else customers[pr.pid]={name:"",phone:"",plan:"quarterly",last:"",notes:"",added:isoDay(Date.now()),geom:ft.geometry,info:pr,group:g};});
+    persist();renderCustomers();renderList();ownHits=[];ownSel.clear();ownTerm="";activeGroup=g;renderGroups();showGroupOnMap(g);
+    toast(`Added ${n} propert${n===1?"y":"ies"} to ${groups[g].name}`);};
+}
+
+/* ---------- Import customers from a spreadsheet ---------- */
+function loadXLSX(){return window.XLSX?Promise.resolve(window.XLSX):new Promise((res,rej)=>{const sc=document.createElement("script");
+  sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";sc.onload=()=>res(window.XLSX);sc.onerror=()=>rej(new Error("Couldn't load the spreadsheet reader. Check your connection."));document.head.appendChild(sc);});}
+const HDR={
+  address:["address","streetaddress","street","propertyaddress","serviceaddress","location","addr","situs","houseaddress","property","address1","addressline1","jobaddress","siteaddress"],
+  city:["city","town","citystate"],
+  name:["name","customer","customername","client","clientname","fullname","contactname","homeowner","tenant","resident"],
+  first:["firstname","first"],last:["lastname","last","surname"],
+  phone:["phone","phonenumber","cell","cellphone","mobile","tel","telephone","contactphone","primaryphone","phone1"],
+  plan:["plan","frequency","schedule","serviceplan","interval","servicefrequency","program","servicetype"],
+  lastsvc:["lastservice","lastservicedate","lastvisit","lastserviced","servicedate","date","lastdate","lasttreatment","lasttreated","dateserviced","lastsprayed"],
+  notes:["notes","note","comments","comment","details","gatecode","gate","pests","pest","instructions","specialinstructions","treatment","products","access"],
+  email:["email","emailaddress","mail"],
+  group:["group","propertymanager","manager","landlord","company","account","managementcompany","pm","ownergroup"]};
+const keyOf=h=>String(h??"").toLowerCase().replace(/[^a-z0-9]/g,"");
+function mapHeaders(row){const m={};row.forEach((h,i)=>{const k=keyOf(h);if(!k)return;for(const[f,list]of Object.entries(HDR)){if(list.includes(k)){if(f==="notes")(m.notes=m.notes||[]).push(i);else if(m[f]===undefined)m[f]=i;break;}}});return m;}
+function parsePlan(v){const s=String(v??"").toLowerCase();if(!s.trim())return "quarterly";
+  if(/one|once|single|1x|initial|clean ?out/.test(s))return "once";
+  if(/semi|6 ?mo|six|twice a year|bi-?annual/.test(s))return "semiannual";
+  if(/bi-?month|every (other|2|two) month|2 ?mo|60/.test(s))return "bimonthly";
+  if(/quarter|3 ?mo|three|90|qtr/.test(s))return "quarterly";
+  if(/month|30|mo\b/.test(s))return "monthly";
+  if(/year|annual|12 ?mo/.test(s))return "yearly";
+  return "quarterly";}
+function parseDate(v){
+  if(v instanceof Date&&!isNaN(v))return isoDay(v.getTime()+12*36e5);
+  if(typeof v==="number"&&v>20000&&v<80000){const d=new Date(Math.round((v-25569)*864e5));return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0");}
+  const s=String(v??"").trim();if(!s)return "";let m;
+  if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)))return m[1]+"-"+m[2].padStart(2,"0")+"-"+m[3].padStart(2,"0");
+  if((m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/))){const y=m[3].length===2?"20"+m[3]:m[3];return y+"-"+m[1].padStart(2,"0")+"-"+m[2].padStart(2,"0");}
+  const t=Date.parse(s);return isNaN(t)?"":isoDay(t);}
+const SUF={STREET:"ST",ST:"ST",AVENUE:"AVE",AVE:"AVE",AV:"AVE",BOULEVARD:"BLVD",BLVD:"BLVD",DRIVE:"DR",DR:"DR",COURT:"CT",CT:"CT",PLACE:"PL",PL:"PL",LANE:"LN",LN:"LN",ROAD:"RD",RD:"RD",PARKWAY:"PKWY",PKWY:"PKWY",CIRCLE:"CIR",CIR:"CIR",TERRACE:"TER",TER:"TER",HIGHWAY:"HWY",HWY:"HWY",TRAIL:"TRL",TRL:"TRL",WAY:"WAY",LOOP:"LOOP",LP:"LOOP",SQUARE:"SQ",SQ:"SQ",POINT:"PT",PT:"PT",RIDGE:"RDG",RDG:"RDG",VIEW:"VW",VW:"VW",COVE:"CV",CV:"CV"};
+const SUFV=new Set(Object.values(SUF));
+const DIRS={NORTH:"N",SOUTH:"S",EAST:"E",WEST:"W",NORTHEAST:"NE",NORTHWEST:"NW",SOUTHEAST:"SE",SOUTHWEST:"SW",N:"N",S:"S",E:"E",W:"W",NE:"NE",NW:"NW",SE:"SE",SW:"SW"};
+function streetTokens(s){return String(s??"").toUpperCase().split(/\r?\n|,/)[0].replace(/#\s*\S+/g," ").replace(/\b(APT|UNIT|STE|SUITE|SPC|SPACE|LOT|BLDG|TRLR)\.?\s*\S+/g," ").replace(/[^A-Z0-9 ]/g," ").split(/\s+/).filter(Boolean);}
+function normStreet(s){
+  const raw=streetTokens(s);
+  const out=raw.map((w,i)=>{const nx=raw[i+1];if((w==="ROAD"||w==="RD")&&nx&&/^\d+$/.test(nx))return "ROAD";if(i>0&&DIRS[w])return DIRS[w];if(i>0&&SUF[w])return SUF[w];return w;});
+  const num=/^\d+[A-Z]?$/.test(out[0]||"")?out[0]:"";const rest=num?out.slice(1):out;
+  const core=rest.filter((w,i)=>!((DIRS[w]===w)&&(i===0||i===rest.length-1))&&!(SUFV.has(w)&&i===rest.length-1)).join(" ");
+  return{num,key:rest.join(" "),core};}
+function keyword(s){let w=streetTokens(s).map((x,i,a)=>(x==="RD"||x==="ROAD")&&/^\d+$/.test(a[i+1]||"")?"ROAD":x);if(/^\d+[A-Z]?$/.test(w[0]||""))w=w.slice(1);
+  if(w.length>1&&DIRS[w[0]])w=w.slice(1);
+  if(w.length>1&&DIRS[w[w.length-1]])w=w.slice(0,-1);
+  if(w.length>1&&SUF[w[w.length-1]])w=w.slice(0,-1);
+  return w.join(" ")||null;}
+function pickSources(city){const c=city.toUpperCase();
+  if(/PASCO/.test(c))return SOURCES.filter(s=>s.key==="pasco"||s.key==="wa");
+  if(/BURBANK|ELTOPIA|MESA|CONNELL|FRANKLIN/.test(c))return SOURCES.filter(s=>s.key==="wa");
+  if(/RICHLAND|KENNEWICK|FINLEY|BENTON|PROSSER|PLYMOUTH|PATERSON/.test(c))return SOURCES.filter(s=>s.key==="benton");
+  return SOURCES;}
+async function candQuery(srcs,num,kw){
+  const res=await Promise.allSettled(srcs.map(s=>arcQuery(s,{where:(s.where?s.where+" AND ":"")+`UPPER(${s.addrField}) LIKE '${num} %'`+(kw?` AND UPPER(${s.addrField}) LIKE '%${kw.replace(/'/g,"''")}%'`:""),resultRecordCount:"60"})));
+  if(res.every(x=>x.status==="rejected"))throw new Error("offline");
+  return res.flatMap(x=>x.status==="fulfilled"?x.value.feats:[]);}
+function pickBest(cands,n,city){
+  const cn=city.toUpperCase().replace(/\bWA\b|\bWASHINGTON\b|\d{5}(-\d{4})?/g," ").replace(/\s+/g," ").trim();
+  let best=null,bs=0;
+  cands.forEach(f=>{const c=normStreet(f.properties.address||"");if(c.num!==n.num)return;let sc=0;
+    if(c.key===n.key)sc=3;else if(c.core&&c.core===n.core)sc=2;else return;
+    const cc=(f.properties.cityLine||"").toUpperCase();if(cn&&cc&&cc.includes(cn))sc+=0.5;
+    if(f.properties.pid[0]==="P")sc+=0.2;
+    if(sc>bs){bs=sc;best=f;}});
+  return best;}
+const impCache=new Map();
+async function matchRow(r){
+  const parts=r.addr.split(/,|\r?\n/);const street=parts[0];const city=(r.city||parts.slice(1).join(" ")).trim();
+  const n=normStreet(street);if(!n.num){r.status="bad";return;}
+  const ck=n.key+"|"+city.toUpperCase();
+  if(!impCache.has(ck)){
+    const srcs=pickSources(city),kw=keyword(street);
+    let cands=await candQuery(srcs,n.num,kw);let best=pickBest(cands,n,city);
+    if(!best&&kw&&kw.includes(" ")){const w=kw.split(" ").sort((a,b)=>b.length-a.length)[0];best=pickBest(await candQuery(srcs,n.num,w),n,city);}
+    if(!best&&srcs.length<SOURCES.length)best=pickBest(await candQuery(SOURCES,n.num,kw),n,city);
+    impCache.set(ck,best||null);
+  }
+  r.feat=impCache.get(ck);r.status=r.feat?(customers[r.feat.properties.pid]?"exists":"ok"):"none";}
+let impRows=[];
+const IMP_LABEL={pending:["p-new","Matching…"],ok:["p-ok","Matched"],exists:["p-due","Already a customer"],none:["p-over","Not found"],bad:["p-over","No house number"],err:["p-over","Couldn't check"]};
+async function handleSheet(file){
+  if(!file)return;
+  const ext=(file.name.split(".").pop()||"").toLowerCase();
+  if(!["csv","tsv","txt","xlsx","xls","xlsm","ods"].includes(ext)){toast(["doc","docx","pdf","pages","jpg","jpeg","png","heic"].includes(ext)?"That's a document, not a spreadsheet. Send it to Claude in chat to turn it into a sheet.":"Use an .xlsx, .xls or .csv file");return;}
+  let XL;try{XL=await loadXLSX();}catch(e){toast(e.message);return;}
+  let aoa=null;
+  try{const wb=XL.read(await file.arrayBuffer(),{type:"array",cellDates:true});
+    for(const nm of wb.SheetNames){const a=XL.utils.sheet_to_json(wb.Sheets[nm],{header:1,defval:"",raw:true,blankrows:false});if(a.length>1){aoa=a;break;}}}
+  catch(e){toast("Couldn't read that file. Save it as .xlsx or .csv and try again.");return;}
+  if(!aoa){toast("That file looks empty");return;}
+  let hi=-1,hm=null;for(let i=0;i<Math.min(15,aoa.length);i++){const m=mapHeaders(aoa[i]);if(m.address!==undefined){hi=i;hm=m;break;}}
+  if(hi<0){toast("Couldn't find an Address column. Name one column Address and try again.");return;}
+  const val=(r,i)=>i===undefined?"":(r[i] instanceof Date?r[i]:String(r[i]??"").trim());
+  impRows=aoa.slice(hi+1).map((r,ix)=>{
+    const addr=String(val(r,hm.address));if(!addr)return null;
+    let name=String(val(r,hm.name));if(!name)name=[val(r,hm.first),val(r,hm.last)].map(String).filter(Boolean).join(" ");
+    const email=String(val(r,hm.email));
+    const notes=[...(hm.notes||[]).map(i=>String(val(r,i))).filter(Boolean),email?"Email: "+email:""].filter(Boolean).join(" · ");
+    const planRaw=String(val(r,hm.plan));
+    return{line:hi+2+ix,addr,city:String(val(r,hm.city)),name,phone:String(val(r,hm.phone)),planRaw,plan:parsePlan(planRaw),last:parseDate(hm.lastsvc===undefined?"":r[hm.lastsvc]),group:String(val(r,hm.group)),notes,status:"pending",feat:null,on:true};
+  }).filter(Boolean);
+  if(!impRows.length){toast("No rows with an address found");return;}
+  openImport(file.name);
+  let i=0;const worker=async()=>{while(i<impRows.length){const r=impRows[i++];try{await matchRow(r);}catch(e){r.status="err";}if(!impRows.includes(r))return;renderImpRow(r);updImpSummary();}};
+  await Promise.all([worker(),worker(),worker(),worker()]);
+}
+function openImport(fname){
+  $("#impTitle").textContent="Review import · "+fname;
+  const L=$("#impList");L.replaceChildren();
+  impRows.forEach(r=>{r.el=document.createElement("label");r.el.className="imp";L.appendChild(r.el);renderImpRow(r);});
+  $("#importModal").hidden=false;updImpSummary();
+}
+function closeImport(){$("#importModal").hidden=true;impRows=[];$("#impList").replaceChildren();}
+function renderImpRow(r){
+  const[cls,lab]=IMP_LABEL[r.status];const can=r.status==="ok"||r.status==="exists";const p=r.feat&&r.feat.properties;
+  const match=p?"→ "+titleCase(p.address)+" · "+cityOf(p)+" · Parcel "+p.parcel:
+    r.status==="none"?"No matching property in county records. Check the spelling, or add it by hand on the map.":
+    r.status==="bad"?"Needs a house number to match.":r.status==="err"?"County records didn't answer. Try again later.":"Row "+r.line;
+  const info=[r.name,r.phone,(PLANS[r.plan]||PLANS.quarterly).label,r.last?"Last service "+r.last:"",r.group?"Group: "+r.group:""].filter(Boolean).join(" · ");
+  r.el.innerHTML=`<input type="checkbox" ${can&&r.on?"checked":""} ${can?"":"disabled"} aria-label="Include row ${r.line}"><span><span class="a">${esc(r.addr)}${r.city?", "+esc(r.city):""}</span><span class="m">${esc(match)}</span>${info?`<span class="m">${esc(info)}</span>`:""}</span><span class="pill ${cls}">${lab}</span>`;
+  r.el.querySelector("input").onchange=e=>{r.on=e.target.checked;updImpSummary();};
+}
+function updImpSummary(){
+  const c=k=>impRows.filter(r=>r.status===k).length;
+  const pend=c("pending"),ok=c("ok"),ex=c("exists"),miss=c("none")+c("bad")+c("err");
+  $("#impSum").textContent=pend?`Matching ${impRows.length-pend} of ${impRows.length} addresses to county records…`:`${ok} new · ${ex} already customers · ${miss} not matched`;
+  const upd=$("#impUpdate").checked;
+  const n=impRows.filter(r=>r.on&&(r.status==="ok"||(r.status==="exists"&&upd))).length;
+  const b=$("#impGo");b.disabled=!!pend||!n;b.textContent=pend?"Matching…":`Import ${n} customer${n===1?"":"s"}`;
+  $("#impMissing").hidden=!!pend||!miss;
+}
+$("#impUpdate").onchange=updImpSummary;
+$("#impClose").onclick=closeImport;$("#impCancel").onclick=closeImport;
+$("#importModal").addEventListener("click",e=>{if(e.target.id==="importModal")closeImport();});
+$("#impGo").onclick=()=>{
+  const upd=$("#impUpdate").checked;const done=[];
+  impRows.forEach(r=>{if(!r.on||!r.feat||!(r.status==="ok"||r.status==="exists"))return;
+    const pr=r.feat.properties,pid=pr.pid,ex=customers[pid];if(ex&&!upd)return;
+    const fields={};if(r.name)fields.name=r.name;if(r.phone)fields.phone=r.phone;if(r.planRaw)fields.plan=r.plan;if(r.last)fields.last=r.last;if(r.notes)fields.notes=r.notes;
+    if(r.group)fields.group=groupByName(r.group)||makeGroup(r.group,"Owner");
+    if(ex)Object.assign(ex,fields);else customers[pid]={name:"",phone:"",plan:"quarterly",last:"",notes:"",added:isoDay(Date.now()),geom:r.feat.geometry,info:pr,...fields};
+    done.push(pid);});
+  persist();renderCustomers();renderList();closeImport();openDrawer("list");
+  if(done.length)map.fitBounds(boundsOf(done),{padding:fitPad(),maxZoom:17});
+  toast(`Imported ${done.length} customer${done.length===1?"":"s"}`);
+};
+$("#impMissing").onclick=()=>{
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const rows=impRows.filter(r=>!(r.status==="ok"||r.status==="exists"));
+  dl(["Row,Address,City,Customer name,Phone,Plan,Last service,Group,Notes,Problem",...rows.map(r=>[r.line,r.addr,r.city,r.name,r.phone,r.planRaw,r.last,r.group,r.notes,IMP_LABEL[r.status][1]].map(q).join(","))].join("\r\n"),"text/csv",`unmatched-addresses-${isoDay(Date.now())}.csv`);
+};
+$("#tplBtn").onclick=()=>dl(["Address,City,Customer name,Phone,Plan,Last service,Group,Notes","1234 Example St,Kennewick,Jane Example,(509) 555-0100,Quarterly,9/15/2026,,Delete this example row"].join("\r\n"),"text/csv","customer-import-template.csv");
+const dz=$("#dropZone");
+dz.onclick=()=>$("#sheetFile").click();dz.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#sheetFile").click();}};
+$("#sheetFile").onchange=e=>{handleSheet(e.target.files[0]);e.target.value="";};
+let dragN=0;const hasFiles=e=>e.dataTransfer&&[...e.dataTransfer.types].includes("Files");
+addEventListener("dragenter",e=>{if(hasFiles(e)){dragN++;document.body.classList.add("dragging");}});
+addEventListener("dragleave",e=>{if(hasFiles(e)){dragN=Math.max(0,dragN-1);if(!dragN)document.body.classList.remove("dragging");}});
+addEventListener("dragover",e=>{if(hasFiles(e))e.preventDefault();});
+addEventListener("drop",e=>{if(!hasFiles(e))return;e.preventDefault();dragN=0;document.body.classList.remove("dragging");
+  const f=e.dataTransfer.files[0];if(!f)return;
+  if(/\.json$/i.test(f.name)){toast("That's a backup file. Use Restore backup in Settings.");return;}
+  handleSheet(f);});
+
 /* ---------- Keyboard ---------- */
 let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600);}
 addEventListener("keydown",e=>{
+  if(!$("#importModal").hidden){if(e.key==="Escape")closeImport();return;}
   if(e.target.matches("input,textarea,select")||e.metaKey||e.ctrlKey||e.altKey)return;
   const k=e.key.toLowerCase();
   if(k==="escape"){if(mode)setMode(mode);else select(null);}
   else if(k==="h")setUI(document.body.classList.contains("no-ui"));
-  else if(k==="a")setMode("add");else if(k==="d")setMode("del");else if(k==="v")setMode("sv");
+  else if(k==="a")setMode("add");else if(k==="d")setMode("del");else if(k==="v")setMode("sv");else if(k==="l")setMode("draw");
+  else if(mode==="draw"&&k==="backspace"){drawPts.pop();updateDraw();}else if(mode==="draw"&&k==="enter")finishDraw();
 });
 renderList();persist();loadSourceDates();
 setInterval(()=>{renderCustomers();renderList();},30*60*1000);
