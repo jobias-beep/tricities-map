@@ -175,6 +175,22 @@ body.card-open .maplibregl-ctrl-top-right{right:394px}
 body.no-ui #rail,body.no-ui #drawer,body.no-ui #top,body.no-ui #tools,body.no-ui #prop,body.no-ui .maplibregl-ctrl-top-right{display:none!important}
 body.drawer-closed #drawer{display:none}
 
+/* Urgent, pets, payment, totals */
+.p-urg{background:#e5484d;color:#fff}
+.row .tags{grid-column:1/-1;display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
+.tg{font-size:11.5px;font-weight:600;color:var(--ink-2);background:var(--wash);border-radius:5px;padding:2px 7px;display:inline-flex;align-items:center;gap:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tg.urg{background:#fde8e8;color:#b42318}
+.tg.pet{background:#fff1d6;color:#8a5200}
+.chip .n{font-variant-numeric:tabular-nums;opacity:.7;font-weight:700}
+.mini{width:auto;max-width:100%;padding:5px 8px;font-size:12.5px;font-weight:600;border-radius:999px;color:var(--ink-2)}
+.hb{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.hbadge{font-size:12.5px;font-weight:700;border-radius:999px;padding:4px 10px;display:inline-flex;gap:5px;align-items:center;max-width:100%}
+.hbadge.urg{background:#fde8e8;color:#b42318}
+.hbadge.pet{background:#fff1d6;color:#8a5200}
+.urgbox{display:flex;flex-direction:column;gap:10px;border:1px solid var(--rule);border-radius:8px;padding:10px}
+.urgbox.on{border-color:#f2b8b5;background:#fff7f7}
+.f label.check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
+.f label.check svg{color:#c27803}
 /* Import, groups, drawn lots */
 .drop{border:2px dashed #c3cdd7;border-radius:10px;padding:18px 14px;text-align:center;color:var(--ink-2);cursor:pointer;display:flex;flex-direction:column;gap:4px;align-items:center;background:var(--wash)}
 .drop b{color:var(--ink);font-size:14.5px}
@@ -255,7 +271,13 @@ body.dragging::after{content:"Drop your spreadsheet to import customers";positio
   <section class="dv" id="vList">
     <header>
       <h2>Your properties <small id="count"></small></h2>
-      <div class="chips" id="filters" role="group" aria-label="Filter"></div>
+      <div class="chips" id="cityChips" role="group" aria-label="Customers by city"></div>
+      <div class="chips" id="filters" role="group" aria-label="Filter by status"></div>
+      <div class="chips" id="moreFilters" role="group" aria-label="More filters">
+        <select class="mini" id="fType" aria-label="Account type"></select>
+        <select class="mini" id="fPay" aria-label="Payment method"></select>
+        <button class="chip" id="fPet" type="button" aria-pressed="false">Has pets</button>
+      </div>
     </header>
     <div class="body"><ul class="rows" id="rows"></ul></div>
   </section>
@@ -290,7 +312,7 @@ body.dragging::after{content:"Drop your spreadsheet to import customers";positio
         <b>Drag a spreadsheet here</b><span>or click to choose a file · .xlsx, .xls or .csv</span>
       </div>
       <input type="file" id="sheetFile" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.ods" hidden>
-      <p style="font-size:13px">It needs an <b>Address</b> column. It also reads City, Customer name, Phone, Plan, Last service, Group and Notes. You review every match before anything is added.</p>
+      <p style="font-size:13px">It needs an <b>Address</b> column. It also reads City, Customer name, Phone, Plan, Last service, Account type, Payment, Pets, Urgent, Group and Notes. You review every match before anything is added.</p>
       <div class="btns"><button class="btn sec2" id="tplBtn" type="button">Download template</button></div>
       <p style="font-size:13px">Records in Word docs, PDFs or on paper? Send them to Claude in chat to turn them into a sheet you can drop here.</p>
       <div class="grp">Backup</div>
@@ -335,6 +357,8 @@ body.dragging::after{content:"Drop your spreadsheet to import customers";positio
     <span><i style="border-color:var(--s-due);background:rgba(232,163,23,.35)"></i>Due within 7 days</span>
     <span><i style="border-color:var(--s-new);background:rgba(47,128,237,.35)"></i>New, not serviced yet</span>
     <span><i style="border-color:var(--s-ok);background:rgba(47,168,104,.35)"></i>Up to date</span>
+    <span><i style="border-color:#e5484d;border-style:dashed;background:rgba(229,72,77,.18);border-radius:50%"></i>Urgent</span>
+    <span style="color:#c27803"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="5.5" cy="10" rx="2.2" ry="2.9"/><ellipse cx="9.5" cy="5.5" rx="2.2" ry="2.9"/><ellipse cx="14.5" cy="5.5" rx="2.2" ry="2.9"/><ellipse cx="18.5" cy="10" rx="2.2" ry="2.9"/><path d="M12 11.5c-3.4 0-6.3 3.9-6.3 6.3 0 1.9 1.5 2.8 3.1 2.8 1.4 0 2-.8 3.2-.8s1.8.8 3.2.8c1.6 0 3.1-.9 3.1-2.8 0-2.4-2.9-6.3-6.3-6.3z"/></svg><span style="color:var(--ink-2)">Has pets</span></span>
     <span><i style="border-color:#fff;background:transparent"></i>Property line</span>
   </div>
 </div>
@@ -436,6 +460,10 @@ function statusOf(c){
   if(left<=7)return{key:"due",label:left===0?"Due today":`Due in ${left}d`,next};
   return{key:"ok",label:"Up to date",next};
 }
+const ACCT_TYPES=["Residential","Commercial","Rental","Property managed","HOA / multi-unit"];
+const PAY=["Cash App","Cash","Check","Invoice","Venmo","Apple Pay"];
+const PAW='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="5.5" cy="10" rx="2.2" ry="2.9"/><ellipse cx="9.5" cy="5.5" rx="2.2" ry="2.9"/><ellipse cx="14.5" cy="5.5" rx="2.2" ry="2.9"/><ellipse cx="18.5" cy="10" rx="2.2" ry="2.9"/><path d="M12 11.5c-3.4 0-6.3 3.9-6.3 6.3 0 1.9 1.5 2.8 3.1 2.8 1.4 0 2-.8 3.2-.8s1.8.8 3.2.8c1.6 0 3.1-.9 3.1-2.8 0-2.4-2.9-6.3-6.3-6.3z"/></svg>';
+function optList(list,cur,empty){return `<option value="">${empty}</option>`+[...list,...(cur&&!list.includes(cur)?[cur]:[])].map(o=>`<option value="${esc(o)}"${o===cur?" selected":""}>${esc(o)}</option>`).join("");}
 const STATUS_COLOR={new:"#2f80ed",due:"#e8a317",over:"#e5484d",ok:"#2fa868",done:"#8b95a1"};
 
 /* ---------- Map ---------- */
@@ -474,6 +502,7 @@ const map=new maplibregl.Map({
       {id:"cust-group",type:"line",source:"cust",filter:["has","gcolor"],layout:{"line-join":"round"},paint:{"line-color":["get","gcolor"],"line-width":["interpolate",["linear"],["zoom"],14,3.5,18,8],"line-opacity":0.9}},
       {id:"cust-fill",type:"fill",source:"cust",paint:{"fill-color":["case",["boolean",["feature-state","del"],false],"#e5484d",["get","color"]],"fill-opacity":["case",["boolean",["feature-state","del"],false],0.6,0.38]}},
       {id:"cust-line",type:"line",source:"cust",paint:{"line-color":["case",["boolean",["feature-state","del"],false],"#ffffff",["get","color"]],"line-width":["interpolate",["linear"],["zoom"],14,1.5,18,3.5]}},
+      {id:"cust-urgent",type:"line",source:"cust",filter:["==",["get","urgent"],true],paint:{"line-color":"#e5484d","line-width":["interpolate",["linear"],["zoom"],14,2,18,4.5],"line-dasharray":[2,1.2]}},
       {id:"sel-fill",type:"fill",source:"parcels",filter:["==",["get","pid"],""],paint:{"fill-color":"#1f5fd6","fill-opacity":0.28}},
       {id:"sel-line",type:"line",source:"parcels",filter:["==",["get","pid"],""],paint:{"line-color":"#ffffff","line-width":4}},
       {id:"sel-line2",type:"line",source:"parcels",filter:["==",["get","pid"],""],paint:{"line-color":"#1f5fd6","line-width":2.2}},
@@ -487,11 +516,13 @@ const map=new maplibregl.Map({
       {id:"route-casing",type:"line",source:"route",layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#16202b","line-width":7,"line-opacity":0.6}},
       {id:"route-line",type:"line",source:"route",filter:["!",["get","straight"]],layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#ffd23f","line-width":4}},
       {id:"route-line-straight",type:"line",source:"route",filter:["get","straight"],layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#ffd23f","line-width":4,"line-dasharray":[1.5,1.5]}},
+      {id:"cust-urgent-halo",type:"circle",source:"custPts",filter:["==",["get","urgent"],true],paint:{"circle-radius":["interpolate",["linear"],["zoom"],10,10,15,15,18,22],"circle-color":"rgba(229,72,77,0.18)","circle-stroke-color":"#e5484d","circle-stroke-width":2.5}},
       {id:"cust-pts",type:"circle",source:"custPts",maxzoom:15.5,
         paint:{"circle-radius":["interpolate",["linear"],["zoom"],10,5,15,8],"circle-color":["case",["boolean",["feature-state","del"],false],"#e5484d",["get","color"]],"circle-stroke-color":"#ffffff","circle-stroke-width":2}},
       {id:"cust-names",type:"symbol",source:"custPts",minzoom:15.5,
         layout:{"text-field":["get","label"],"text-font":["Noto Sans Bold"],"text-size":12,"text-offset":[0,-1.2]},
         paint:{"text-color":"#ffffff","text-halo-color":["get","color"],"text-halo-width":2}},
+      {id:"cust-pet",type:"symbol",source:"custPts",minzoom:11,filter:["==",["get","pet"],true],layout:{"icon-image":"paw","icon-size":["interpolate",["linear"],["zoom"],11,0.7,17,1],"icon-offset":[16,-16],"icon-allow-overlap":true,"icon-ignore-placement":true}},
       {id:"draw-line",type:"line",source:"draw",filter:["==",["geometry-type"],"LineString"],paint:{"line-color":"#22d3ee","line-width":2.5}},
       {id:"draw-pts",type:"circle",source:"draw",filter:["==",["geometry-type"],"Point"],paint:{"circle-radius":["case",["get","first"],7,5],"circle-color":["case",["get","first"],"#ffffff","#22d3ee"],"circle-stroke-color":"#16202b","circle-stroke-width":2}},
       {id:"route-pts",type:"circle",source:"routePts",paint:{"circle-radius":11,"circle-color":["case",["get","home"],"#16202b","#ffd23f"],"circle-stroke-color":"#16202b","circle-stroke-width":2}},
@@ -500,6 +531,12 @@ const map=new maplibregl.Map({
 });
 map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),"top-right");
 map.addControl(new maplibregl.ScaleControl({unit:"imperial"}),"bottom-left");
+function pawImage(){const S=64,cv=document.createElement("canvas");cv.width=cv.height=S;const x=cv.getContext("2d");
+  x.fillStyle="#f59e0b";x.strokeStyle="#ffffff";x.lineWidth=4;x.beginPath();x.arc(32,32,28,0,Math.PI*2);x.fill();x.stroke();
+  x.fillStyle="#3b2a10";const toe=(cx,cy,r)=>{x.beginPath();x.ellipse(cx,cy,4.4,5.8,r,0,Math.PI*2);x.fill();};
+  toe(19,28,-0.4);toe(26.5,20.5,-0.15);toe(37.5,20.5,0.15);toe(45,28,0.4);
+  x.beginPath();x.ellipse(32,40.5,10,8.5,0,0,Math.PI*2);x.fill();return x.getImageData(0,0,S,S);}
+map.on("styleimagemissing",e=>{if(e.id==="paw"&&!map.hasImage("paw"))map.addImage("paw",pawImage(),{pixelRatio:2});});
 map.on("load",()=>{
   if(map.getPitch()>5)map.setTerrain({source:"dem",exaggeration:1.3});else{setPressed($("#v2d"),$("#v3d"));}
   map.setSky&&map.setSky({"sky-color":"#9cc3e6","horizon-color":"#dfe9f2","fog-color":"#dfe9f2","sky-horizon-blend":0.6,"horizon-fog-blend":0.6});
@@ -635,7 +672,7 @@ function renderCard(p,geom){
   let h=`<div class="hero"><button class="close" id="closeCard" aria-label="Close">×</button>
     <div class="eyebrow">${esc(p.county)}${c?` · <span class="pill p-${st.key}">${esc(st.label)}</span>`:""}</div>
     <h3>${esc(p.address?titleCase(p.address):"No street address on file")}</h3>
-    <div class="city">${esc(cityOf(p))}</div>${c&&c.group&&groups[c.group]?`<button class="gbadge" id="gBadge" type="button"><i style="background:${groups[c.group].color}"></i>${esc(groups[c.group].name)}</button>`:""}
+    <div class="city">${esc(cityOf(p))}</div>${c&&(c.urgent||c.pet)?`<div class="hb">${c.urgent?`<span class="hbadge urg">Urgent${c.urgentNote?": "+esc(c.urgentNote):""}${c.urgentBy?" · by "+esc(fmtDay(parseDay(c.urgentBy))):""}</span>`:""}${c.pet?`<span class="hbadge pet">${PAW}${esc(c.petNote||"Has pets")}</span>`:""}</div>`:""}${c&&c.group&&groups[c.group]?`<button class="gbadge" id="gBadge" type="button"><i style="background:${groups[c.group].color}"></i>${esc(groups[c.group].name)}</button>`:""}
     ${p.custom?"":`<div class="value"><b>${money(p.value)}</b><span>${p.county==="Benton County"?"appraised value":"total market value"}</span></div>`}</div>
     <div class="views">
       <button class="vbtn" id="svBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2.5"/><path d="M9 21l1-7-2-1 1-5h6l1 5-2 1 1 7"/></svg>${gkey?(svOpen?"Hide Street View":"Street View"):"Street View ↗"}</button>
@@ -650,10 +687,17 @@ function renderCard(p,geom){
   }else{
     const nextTxt=st.next?fmtDay(st.next):(st.key==="new"?"Not serviced yet":"No repeat visit");
     h+=`<div class="svc"><h4>Service</h4>
+      <div class="urgbox${c.urgent?" on":""}">
+        <button class="btn ${c.urgent?"red":"warn"}" id="cUrgBtn" type="button" aria-pressed="${!!c.urgent}">${c.urgent?"Urgent · click to clear":"Mark as urgent"}</button>
+        <div class="two" id="cUrgFields"${c.urgent?"":" hidden"}><div class="f"><label for="cUrgNote">What's urgent</label><input id="cUrgNote" type="text" value="${esc(c.urgentNote||"")}" placeholder="e.g. Wasp nest by front door"></div><div class="f"><label for="cUrgBy">Needed by</label><input id="cUrgBy" type="date" value="${esc(c.urgentBy||"")}"></div></div>
+      </div>
       <div class="next"><span>Next visit</span><b>${esc(nextTxt)}</b></div>
       ${st.key!=="done"?`<a class="vbtn" href="${esc(gcalUrl(c,p,visitDay(st)))}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Add ${st.next&&st.key!=="over"?"next visit":"a visit"} to Google Calendar ↗</a>`:""}
       <div class="f"><label for="cName">Customer name</label><input id="cName" type="text" value="${esc(c.name)}" placeholder="e.g. Maria Lopez"></div>
       <div class="f"><label for="cPhone">Phone</label><input id="cPhone" type="text" value="${esc(c.phone)}" placeholder="(509) 555-0100"></div>
+      <div class="two"><div class="f"><label for="cAcct">Account type</label><select id="cAcct">${optList(ACCT_TYPES,c.acct,"Not set")}</select></div>
+      <div class="f"><label for="cPay">Pays by</label><select id="cPay">${optList(PAY,c.pay,"Not set")}</select></div></div>
+      <div class="f"><label class="check" for="cPet"><input type="checkbox" id="cPet"${c.pet?" checked":""}>${PAW}Has pets</label><input id="cPetNote" type="text" value="${esc(c.petNote||"")}" placeholder="e.g. 2 dogs in backyard, keep gate shut"${c.pet?"":" hidden"}></div>
       <div class="two"><div class="f"><label for="cPlan">Plan</label><select id="cPlan">${Object.entries(PLANS).map(([k,v])=>`<option value="${k}"${c.plan===k?" selected":""}>${v.label}</option>`).join("")}</select></div>
       <div class="f"><label for="cLast">Last service</label><input id="cLast" type="date" value="${esc(c.last)}"></div></div>
       <div class="f"><label for="cNotes">Notes</label><textarea id="cNotes" placeholder="Pests treated, products used, gate code, dog in yard…">${esc(c.notes)}</textarea></div>
@@ -667,11 +711,13 @@ function renderCard(p,geom){
   const of=$("#ownerFind");if(of)of.onclick=()=>{ownTerm=p.owner;ownHits=[];activeGroup=c&&c.group&&groups[c.group]?c.group:null;openDrawer("groups");const f=document.querySelector("#grpBody form.savebox");f&&f.requestSubmit();};
   $("#svBtn").onclick=()=>{if(!gkey){openStreetView(lat,lng);return;}svOpen=!svOpen;renderCard(p,geom);};
   if(!c){$("#addCust").onclick=()=>addCustomer(p.pid);return;}
-  const read=()=>({name:$("#cName").value.trim(),phone:$("#cPhone").value.trim(),plan:$("#cPlan").value,last:$("#cLast").value,notes:$("#cNotes").value.trim(),group:readGroup()});
+  const read=()=>({name:$("#cName").value.trim(),phone:$("#cPhone").value.trim(),plan:$("#cPlan").value,last:$("#cLast").value,notes:$("#cNotes").value.trim(),group:readGroup(),acct:$("#cAcct").value,pay:$("#cPay").value,pet:$("#cPet").checked,petNote:$("#cPetNote").value.trim(),urgentNote:$("#cUrgNote").value.trim(),urgentBy:$("#cUrgBy").value});
+  $("#cPet").onchange=e=>{$("#cPetNote").hidden=!e.target.checked;if(e.target.checked)$("#cPetNote").focus();};
   const gs=$("#cGroup");gs.onchange=()=>{$("#cGroupNew").hidden=gs.value!=="__new";if(gs.value==="__new")$("#cGroupNew").focus();};
   const after=m=>{persist();renderCustomers();renderCard(p,geom);renderList();toast(m);};
   $("#saveCust").onclick=()=>{Object.assign(customers[p.pid],read());after("Saved");};
-  $("#svcToday").onclick=()=>{Object.assign(customers[p.pid],read(),{last:isoDay(Date.now())});after("Marked serviced today");};
+  $("#svcToday").onclick=()=>{const was=customers[p.pid].urgent;Object.assign(customers[p.pid],read(),{last:isoDay(Date.now()),urgent:false,urgentNote:"",urgentBy:""});after(was?"Marked serviced today. Urgent flag cleared.":"Marked serviced today");};
+  $("#cUrgBtn").onclick=()=>{const on=!customers[p.pid].urgent;Object.assign(customers[p.pid],read(),{urgent:on},on?{}:{urgentNote:"",urgentBy:""});after(on?"Marked urgent":"Urgent cleared");if(on)setTimeout(()=>{const n=$("#cUrgNote");n&&n.focus();},60);};
   const rm=$("#rmCust");rm.onclick=()=>{
     if(rm.dataset.arm){delete customers[p.pid];after("Removed from customers");}
     else{rm.dataset.arm="1";rm.textContent="Click again to remove";setTimeout(()=>{if(rm.isConnected){delete rm.dataset.arm;rm.textContent="Remove";}},3000);}
@@ -689,9 +735,10 @@ function renderCustomers(){
   Object.entries(customers).forEach(([pid,c])=>{
     const color=STATUS_COLOR[statusOf(c).key];
     const gc=c.group&&groups[c.group]?groups[c.group].color:null;
-    polys.push({type:"Feature",geometry:c.geom,properties:gc?{pid,color,gcolor:gc}:{pid,color}});
+    const pr={pid,color,urgent:!!c.urgent};if(gc)pr.gcolor=gc;
+    polys.push({type:"Feature",geometry:c.geom,properties:pr});
     const[cx,cy]=centroid(c.geom);
-    pts.push({type:"Feature",geometry:{type:"Point",coordinates:[cx,cy]},properties:{pid,color,label:c.name||titleCase(c.info.address||"Customer")}});
+    pts.push({type:"Feature",geometry:{type:"Point",coordinates:[cx,cy]},properties:{pid,color,urgent:!!c.urgent,pet:!!c.pet,label:c.name||titleCase(c.info.address||"Customer")}});
   });
   if(map.getSource("cust")){map.getSource("cust").setData({type:"FeatureCollection",features:polys});map.getSource("custPts").setData({type:"FeatureCollection",features:pts});
     setTimeout(()=>delSel.forEach(pid=>setDel(pid,true)),60);}
@@ -700,22 +747,43 @@ function flyToPid(pid){
   const f=featureFor(pid);if(!f)return;const[cx,cy]=centroid(f.geometry);
   map.flyTo({center:[cx,cy],zoom:Math.max(map.getZoom(),18),pitch:map.getPitch()>5?60:0,speed:1.4});
 }
-let filter="all";
-[["all","All"],["over","Overdue"],["due","Due soon"],["new","New"],["ok","Up to date"]].forEach(([k,l])=>{const b=document.createElement("button");b.type="button";b.className="chip";b.dataset.k=k;
-  b.innerHTML=k!=="all"?`<i style="background:${STATUS_COLOR[k]}"></i>`:"";b.append(l);b.onclick=()=>{filter=k;renderList();};$("#filters").appendChild(b);});
+let filter="all",cityF="",typeF="",payF="",petF=false;
+[["all","All"],["urgent","Urgent"],["over","Overdue"],["due","Due soon"],["new","New"],["ok","Up to date"]].forEach(([k,l])=>{const b=document.createElement("button");b.type="button";b.className="chip";b.dataset.k=k;
+  b.innerHTML=k==="urgent"?`<i style="background:#e5484d;box-shadow:0 0 0 2px #fde8e8"></i>`:k!=="all"?`<i style="background:${STATUS_COLOR[k]}"></i>`:"";b.append(l);b.onclick=()=>{filter=k;renderList();};$("#filters").appendChild(b);});
+$("#fType").onchange=e=>{typeF=e.target.value;renderList();};$("#fPay").onchange=e=>{payF=e.target.value;renderList();};$("#fPet").onclick=()=>{petF=!petF;renderList();};
+const MAIN_CITIES=["Richland","Kennewick","Pasco","West Richland"];
+function cityName(c){const info=c.info||{};if(info.custom&&!info.cityLine)return "Other";
+  const n=titleCase(String(cityOf(info)).split(",")[0].replace(/\d{5}.*/,"").trim());return /^(W|West) Richland$/i.test(n)?"West Richland":(n||"Other");}
+const urgBy=c=>c.urgentBy?parseDay(c.urgentBy):9e15;
 function renderList(){
-  [...$("#filters").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===filter)));
   const order={over:0,due:1,new:2,ok:3,done:4};
-  const all=Object.entries(customers).map(([pid,c])=>({pid,c,st:statusOf(c)}));
-  const items=all.filter(x=>filter==="all"||x.st.key===filter).sort((a,b)=>order[a.st.key]-order[b.st.key]||(a.st.next||0)-(b.st.next||0));
-  $("#count").textContent=all.length?`${all.length} customer${all.length>1?"s":""}`:"";
+  const all=Object.entries(customers).map(([pid,c])=>({pid,c,st:statusOf(c),city:cityName(c)}));
+  const counts={};all.forEach(x=>counts[x.city]=(counts[x.city]||0)+1);
+  const cities=Object.keys(counts).sort((a,b)=>{const ia=MAIN_CITIES.indexOf(a),ib=MAIN_CITIES.indexOf(b);return (ia<0?9:ia)-(ib<0?9:ib)||counts[b]-counts[a]||a.localeCompare(b);});
+  if(cityF&&!counts[cityF])cityF="";
+  const cc=$("#cityChips");cc.replaceChildren();cc.hidden=!all.length;
+  [["","All cities",all.length],...cities.map(n=>[n,n,counts[n]])].forEach(([k,l,n])=>{const b=document.createElement("button");b.type="button";b.className="chip";b.setAttribute("aria-pressed",String(cityF===k));
+    b.innerHTML=`${esc(l)} <span class="n">${n}</span>`;b.onclick=()=>{cityF=k;renderList();};cc.appendChild(b);});
+  const urg=all.filter(x=>x.c.urgent).length,pets=all.filter(x=>x.c.pet).length;
+  $("#count").textContent=all.length?`${all.length} total${urg?` · ${urg} urgent`:""}`:"";
+  [...$("#filters").children].forEach(b=>{b.setAttribute("aria-pressed",String(b.dataset.k===filter));if(b.dataset.k==="urgent")b.lastChild.textContent=urg?`Urgent (${urg})`:"Urgent";});
+  const types=[...new Set([...ACCT_TYPES,...all.map(x=>x.c.acct).filter(Boolean)])],pays=[...new Set([...PAY,...all.map(x=>x.c.pay).filter(Boolean)])];
+  $("#fType").innerHTML=optList(types,typeF,"All account types");$("#fPay").innerHTML=optList(pays,payF,"All payment types");
+  const fp=$("#fPet");fp.setAttribute("aria-pressed",String(petF));fp.innerHTML=PAW+` Has pets${pets?` <span class="n">${pets}</span>`:""}`;
+  $("#moreFilters").hidden=!all.length;$("#filters").hidden=!all.length;
+  const items=all.filter(x=>(filter==="all"||(filter==="urgent"?x.c.urgent:x.st.key===filter))&&(!cityF||x.city===cityF)&&(!typeF||x.c.acct===typeF)&&(!payF||x.c.pay===payF)&&(!petF||x.c.pet))
+    .sort((a,b)=>(b.c.urgent?1:0)-(a.c.urgent?1:0)||urgBy(a.c)-urgBy(b.c)||order[a.st.key]-order[b.st.key]||(a.st.next||0)-(b.st.next||0));
   const ul=$("#rows");ul.replaceChildren();
-  if(!all.length){ul.innerHTML=`<li class="empty"><b>No customers yet.</b> Press <b>Add property</b> on the left and click a house, or search an address above and press <b>Add as customer</b>. Overdue and due-soon houses rise to the top of this list.</li>`;return;}
-  if(!items.length){ul.innerHTML=`<li class="empty">No customers with this status.</li>`;return;}
+  if(!all.length){ul.innerHTML=`<li class="empty"><b>No customers yet.</b> Press <b>Add property</b> on the left and click a house, search an address above, or import a spreadsheet in Settings. Urgent, overdue and due-soon houses rise to the top of this list.</li>`;return;}
+  if(!items.length){ul.innerHTML=`<li class="empty">No customers match these filters.</li>`;return;}
   items.forEach(({pid,c,st})=>{
     const li=document.createElement("li");li.className="row"+(pid===selected?" sel":"")+(delSel.has(pid)?" del":"");li.tabIndex=0;
-    li.innerHTML=`<span class="addr">${esc(titleCase(c.info.address||"No address"))}</span><span class="pill p-${st.key}">${esc(st.label)}</span>
-      <span class="who">${esc(c.name||"Name not added")}${c.group&&groups[c.group]?" · "+esc(groups[c.group].name):""} · ${esc((PLANS[c.plan]||PLANS.quarterly).label)}</span><span class="when">${mode==="del"?(delSel.has(pid)?"Selected":"Click to select"):(st.next?"Next "+esc(fmtDay(st.next)):"")}</span>`;
+    const pill=c.urgent?`<span class="pill p-urg">Urgent</span>`:`<span class="pill p-${st.key}">${esc(st.label)}</span>`;
+    const tags=[c.urgent&&(c.urgentNote||c.urgentBy)?`<span class="tg urg">${esc([c.urgentNote,c.urgentBy?"by "+fmtDay(parseDay(c.urgentBy)):""].filter(Boolean).join(" · "))}</span>`:"",
+      c.urgent?`<span class="tg">${esc(st.label)}</span>`:"",c.acct?`<span class="tg">${esc(c.acct)}</span>`:"",c.pay?`<span class="tg">${esc(c.pay)}</span>`:"",
+      c.pet?`<span class="tg pet">${PAW}${esc(c.petNote||"Pets")}</span>`:""].filter(Boolean).join("");
+    li.innerHTML=`<span class="addr">${esc(titleCase(c.info.address||"No address"))}</span>${pill}
+      <span class="who">${esc(c.name||"Name not added")}${c.group&&groups[c.group]?" · "+esc(groups[c.group].name):""} · ${esc((PLANS[c.plan]||PLANS.quarterly).label)}</span><span class="when">${mode==="del"?(delSel.has(pid)?"Selected":"Click to select"):(st.next?"Next "+esc(fmtDay(st.next)):"")}</span>${tags?`<span class="tags">${tags}</span>`:""}`;
     const go=()=>{if(mode==="del"){toggleDel(pid);return;}flyToPid(pid);select(pid);};li.onclick=go;li.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();go();}};
     ul.appendChild(li);
   });
@@ -857,7 +925,7 @@ const ymd=t=>isoDay(t).replace(/-/g,"");
 function visitDay(st){return st.next&&st.next>today()?st.next:today();}
 function gcalUrl(c,p,day){
   const title="Pest service: "+(c.name||titleCase(p.address||"Customer"));
-  const details=[c.name&&("Customer: "+c.name),c.phone&&("Phone: "+c.phone),"Plan: "+(PLANS[c.plan]||PLANS.quarterly).label,c.notes&&("Notes: "+c.notes)].filter(Boolean).join("\n");
+  const details=[c.name&&("Customer: "+c.name),c.phone&&("Phone: "+c.phone),"Plan: "+(PLANS[c.plan]||PLANS.quarterly).label,c.notes&&("Notes: "+c.notes),c.urgent&&("URGENT: "+(c.urgentNote||"yes")),c.pet&&("Pets: "+(c.petNote||"yes")),c.pay&&("Pays by: "+c.pay)].filter(Boolean).join("\n");
   return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(title)+"&dates="+ymd(day)+"/"+ymd(day+DAY)+"&details="+encodeURIComponent(details)+"&location="+encodeURIComponent(titleCase(p.address||"")+", "+cityOf(p));
 }
 const icsEsc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/[,;]/g,m=>"\\"+m).replace(/\r?\n/g,"\\n");
@@ -884,7 +952,7 @@ function decodePolyline(str){let i=0,lat=0,lng=0;const out=[];while(i<str.length
 function renderRoute(){
   const body=$("#routeBody");body.replaceChildren();
   const all=Object.entries(customers).map(([pid,c])=>({pid,c,st:statusOf(c)}));
-  if(!routeTouched){routeSel.clear();all.forEach(x=>{if(["over","due","new"].includes(x.st.key))routeSel.add(x.pid);});}
+  if(!routeTouched){routeSel.clear();all.forEach(x=>{if(x.c.urgent||["over","due","new"].includes(x.st.key))routeSel.add(x.pid);});}
   [...routeSel].forEach(pid=>{if(!customers[pid])routeSel.delete(pid);});
   $("#routeCount").textContent=routeSel.size?`${routeSel.size} stop${routeSel.size>1?"s":""}`:"";
   const hb=document.createElement("div");hb.className="next";
@@ -1122,9 +1190,22 @@ const HDR={
   lastsvc:["lastservice","lastservicedate","lastvisit","lastserviced","servicedate","date","lastdate","lasttreatment","lasttreated","dateserviced","lastsprayed"],
   notes:["notes","note","comments","comment","details","gatecode","gate","pests","pest","instructions","specialinstructions","treatment","products","access"],
   email:["email","emailaddress","mail"],
+  urgent:["urgent","priority","rush","asap","emergency"],
+  acct:["accounttype","customertype","category","type","propertytype","accountkind"],
+  pay:["payment","paymentmethod","pay","paymenttype","paidby","payby","paysby","paymethod","howpays"],
+  pet:["pet","pets","dog","dogs","animals","haspets","petnotes","haspet"],
   group:["group","propertymanager","manager","landlord","company","account","managementcompany","pm","ownergroup"]};
 const keyOf=h=>String(h??"").toLowerCase().replace(/[^a-z0-9]/g,"");
 function mapHeaders(row){const m={};row.forEach((h,i)=>{const k=keyOf(h);if(!k)return;for(const[f,list]of Object.entries(HDR)){if(list.includes(k)){if(f==="notes")(m.notes=m.notes||[]).push(i);else if(m[f]===undefined)m[f]=i;break;}}});return m;}
+const YESV=/^(y|yes|true|1|x|✓|✔)$/i,NOV=/^(n|no|none|false|0|-|n\/a|na)$/i;
+function flagVal(v){const t=String(v??"").trim();if(!t||NOV.test(t))return{on:false,note:""};return{on:true,note:YESV.test(t)?"":t};}
+function normPay(v){const raw=String(v??"").trim(),t=raw.toLowerCase().replace(/[^a-z]/g,"");if(!t)return "";
+  if(t.includes("cashapp")||t.includes("cashtag"))return "Cash App";if(t.includes("venmo"))return "Venmo";if(t.includes("apple"))return "Apple Pay";
+  if(t.includes("check")||t.includes("cheque"))return "Check";if(t.includes("invoice")||t.includes("bill"))return "Invoice";if(t.includes("cash"))return "Cash";return raw;}
+function normAcct(v){const raw=String(v??"").trim(),t=raw.toLowerCase();if(!t)return "";
+  if(/hoa|multi|apartment|complex|duplex|condo/.test(t))return "HOA / multi-unit";if(/manag|\bpm\b/.test(t))return "Property managed";
+  if(/rent|tenant|landlord/.test(t))return "Rental";if(/commerc|business|office|restaurant|store|shop/.test(t))return "Commercial";
+  if(/resid|home|house|single/.test(t))return "Residential";return raw;}
 function parsePlan(v){const s=String(v??"").toLowerCase();if(!s.trim())return "quarterly";
   if(/one|once|single|1x|initial|clean ?out/.test(s))return "once";
   if(/semi|6 ?mo|six|twice a year|bi-?annual/.test(s))return "semiannual";
@@ -1207,7 +1288,7 @@ async function handleSheet(file){
     const email=String(val(r,hm.email));
     const notes=[...(hm.notes||[]).map(i=>String(val(r,i))).filter(Boolean),email?"Email: "+email:""].filter(Boolean).join(" · ");
     const planRaw=String(val(r,hm.plan));
-    return{line:hi+2+ix,addr,city:String(val(r,hm.city)),name,phone:String(val(r,hm.phone)),planRaw,plan:parsePlan(planRaw),last:parseDate(hm.lastsvc===undefined?"":r[hm.lastsvc]),group:String(val(r,hm.group)),notes,status:"pending",feat:null,on:true};
+    return{line:hi+2+ix,addr,city:String(val(r,hm.city)),name,phone:String(val(r,hm.phone)),planRaw,plan:parsePlan(planRaw),last:parseDate(hm.lastsvc===undefined?"":r[hm.lastsvc]),group:String(val(r,hm.group)),acct:normAcct(val(r,hm.acct)),pay:normPay(val(r,hm.pay)),petF:flagVal(val(r,hm.pet)),urgF:flagVal(val(r,hm.urgent)),notes,status:"pending",feat:null,on:true};
   }).filter(Boolean);
   if(!impRows.length){toast("No rows with an address found");return;}
   openImport(file.name);runMatch(impRows);
@@ -1228,7 +1309,7 @@ function renderImpRow(r){
   const match=p?"→ "+titleCase(p.address)+" · "+cityOf(p)+" · Parcel "+p.parcel:
     r.status==="none"?"No matching property in county records. Check the spelling, or add it by hand on the map.":
     r.status==="bad"?"Needs a house number to match.":r.status==="err"?"County records didn't answer. Try again later.":"Row "+r.line;
-  const info=[r.name,r.phone,(PLANS[r.plan]||PLANS.quarterly).label,r.last?"Last service "+r.last:"",r.group?"Group: "+r.group:""].filter(Boolean).join(" · ");
+  const info=[r.name,r.phone,(PLANS[r.plan]||PLANS.quarterly).label,r.last?"Last service "+r.last:"",r.acct,r.pay,r.petF.on?"Pets"+(r.petF.note?": "+r.petF.note:""):"",r.urgF.on?"URGENT"+(r.urgF.note?": "+r.urgF.note:""):"",r.group?"Group: "+r.group:""].filter(Boolean).join(" · ");
   r.el.innerHTML=`<input type="checkbox" ${can&&r.on?"checked":""} ${can?"":"disabled"} aria-label="Include row ${r.line}"><span><span class="a">${esc(r.addr)}${r.city?", "+esc(r.city):""}</span><span class="m">${esc(match)}</span>${info?`<span class="m">${esc(info)}</span>`:""}</span><span class="pill ${cls}">${lab}</span>`;
   r.el.querySelector("input").onchange=e=>{r.on=e.target.checked;updImpSummary();};
 }
@@ -1250,7 +1331,7 @@ $("#impGo").onclick=()=>{
   const upd=$("#impUpdate").checked;const done=[];
   impRows.forEach(r=>{if(!r.on||!r.feat||!(r.status==="ok"||r.status==="exists"))return;
     const pr=r.feat.properties,pid=pr.pid,ex=customers[pid];if(ex&&!upd)return;
-    const fields={};if(r.name)fields.name=r.name;if(r.phone)fields.phone=r.phone;if(r.planRaw)fields.plan=r.plan;if(r.last)fields.last=r.last;if(r.notes)fields.notes=r.notes;
+    const fields={};if(r.name)fields.name=r.name;if(r.phone)fields.phone=r.phone;if(r.planRaw)fields.plan=r.plan;if(r.last)fields.last=r.last;if(r.notes)fields.notes=r.notes;if(r.acct)fields.acct=r.acct;if(r.pay)fields.pay=r.pay;if(r.petF.on){fields.pet=true;if(r.petF.note)fields.petNote=r.petF.note;}if(r.urgF.on){fields.urgent=true;if(r.urgF.note)fields.urgentNote=r.urgF.note;}
     if(r.group)fields.group=groupByName(r.group)||makeGroup(r.group,"Owner");
     if(ex)Object.assign(ex,fields);else customers[pid]={name:"",phone:"",plan:"quarterly",last:"",notes:"",added:isoDay(Date.now()),geom:r.feat.geometry,info:pr,...fields};
     done.push(pid);});
@@ -1263,7 +1344,7 @@ $("#impMissing").onclick=()=>{
   const rows=impRows.filter(r=>!(r.status==="ok"||r.status==="exists"));
   dl(["Row,Address,City,Customer name,Phone,Plan,Last service,Group,Notes,Problem",...rows.map(r=>[r.line,r.addr,r.city,r.name,r.phone,r.planRaw,r.last,r.group,r.notes,IMP_LABEL[r.status][1]].map(q).join(","))].join("\r\n"),"text/csv",`unmatched-addresses-${isoDay(Date.now())}.csv`);
 };
-$("#tplBtn").onclick=()=>dl(["Address,City,Customer name,Phone,Plan,Last service,Group,Notes","1234 Example St,Kennewick,Jane Example,(509) 555-0100,Quarterly,9/15/2026,,Delete this example row"].join("\r\n"),"text/csv","customer-import-template.csv");
+$("#tplBtn").onclick=()=>dl(["Address,City,Customer name,Phone,Plan,Last service,Account type,Payment,Pets,Urgent,Group,Notes","1234 Example St,Kennewick,Jane Example,(509) 555-0100,Quarterly,9/15/2026,Residential,Venmo,1 dog in backyard,,,Delete this example row"].join("\r\n"),"text/csv","customer-import-template.csv");
 const dz=$("#dropZone");
 dz.onclick=()=>$("#sheetFile").click();dz.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#sheetFile").click();}};
 $("#sheetFile").onchange=e=>{handleSheet(e.target.files[0]);e.target.value="";};
