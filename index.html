@@ -169,7 +169,9 @@ body.card-open #tools{right:408px}
 #tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:#fff;font-size:12.5px;font-weight:600;padding:5px 9px;border-radius:6px;transform:translate(12px,12px);white-space:nowrap}
 .maplibregl-ctrl-group{border-radius:8px!important;box-shadow:var(--shadow)!important}
 body.card-open .maplibregl-ctrl-top-right{right:394px}
-#toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:30;background:var(--ink);color:#fff;padding:9px 16px;border-radius:8px;font-weight:600;box-shadow:var(--shadow)}
+#toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:30;background:var(--ink);color:#fff;padding:9px 16px;border-radius:8px;font-weight:600;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px)}
+#toast button{border:0;background:none;color:#8db4ff;font-weight:800;cursor:pointer;padding:2px 4px;border-radius:4px}
+#toast button:focus-visible{outline:2px solid #8db4ff}
 #showUI{position:fixed;left:14px;top:14px;z-index:14;background:var(--rail);color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer;box-shadow:var(--shadow);display:flex;gap:8px;align-items:center}
 #showUI:focus-visible{outline:2px solid #8db4ff}
 body.no-ui #rail,body.no-ui #drawer,body.no-ui #top,body.no-ui #tools,body.no-ui #prop,body.no-ui .maplibregl-ctrl-top-right{display:none!important}
@@ -503,9 +505,9 @@ const map=new maplibregl.Map({
       {id:"cust-fill",type:"fill",source:"cust",paint:{"fill-color":["case",["boolean",["feature-state","del"],false],"#e5484d",["get","color"]],"fill-opacity":["case",["boolean",["feature-state","del"],false],0.6,0.38]}},
       {id:"cust-line",type:"line",source:"cust",paint:{"line-color":["case",["boolean",["feature-state","del"],false],"#ffffff",["get","color"]],"line-width":["interpolate",["linear"],["zoom"],14,1.5,18,3.5]}},
       {id:"cust-urgent",type:"line",source:"cust",filter:["==",["get","urgent"],true],paint:{"line-color":"#e5484d","line-width":["interpolate",["linear"],["zoom"],14,2,18,4.5],"line-dasharray":[2,1.2]}},
-      {id:"sel-fill",type:"fill",source:"parcels",filter:["==",["get","pid"],""],paint:{"fill-color":"#1f5fd6","fill-opacity":0.28}},
+      {id:"sel-fill",type:"fill",source:"parcels",filter:["==",["get","pid"],""],paint:{"fill-color":"#ffffff","fill-opacity":0.22}},
       {id:"sel-line",type:"line",source:"parcels",filter:["==",["get","pid"],""],paint:{"line-color":"#ffffff","line-width":4}},
-      {id:"sel-line2",type:"line",source:"parcels",filter:["==",["get","pid"],""],paint:{"line-color":"#1f5fd6","line-width":2.2}},
+      {id:"sel-line2",type:"line",source:"parcels",filter:["==",["get","pid"],""],paint:{"line-color":"#16202b","line-width":1.6,"line-dasharray":[2,1.5]}},
       {id:"roads",type:"symbol",source:"ofm","source-layer":"transportation_name",minzoom:13.5,
         layout:{"symbol-placement":"line","text-field":["get","name"],"text-font":["Noto Sans Regular"],"text-size":12},
         paint:{"text-color":"#ffffff","text-halo-color":"rgba(0,0,0,.75)","text-halo-width":1.4}},
@@ -604,7 +606,8 @@ function updateDelBar(){const n=delSel.size;$("#modeTxt").textContent=n?`${n} pr
   const b=$("#modeAct");b.disabled=!n;b.textContent=n?`Delete ${n}`:"Delete";delete b.dataset.arm;}
 $("#modeAct").onclick=()=>{if(mode==="draw"){finishDraw();return;}const b=$("#modeAct");if(!delSel.size)return;
   if(!b.dataset.arm){b.dataset.arm="1";b.textContent=`Confirm delete ${delSel.size}`;setTimeout(()=>{if(b.dataset.arm)updateDelBar();},3500);return;}
-  const n=delSel.size;delSel.forEach(pid=>{delete customers[pid];if(selected===pid)select(null);});delSel.clear();persist();renderCustomers();renderList();updateDelBar();toast(`Deleted ${n} propert${n>1?"ies":"y"}`);};
+  const n=delSel.size,saved={};delSel.forEach(pid=>{saved[pid]=customers[pid];delete customers[pid];if(selected===pid)select(null);});delSel.clear();persist();renderCustomers();renderList();updateDelBar();
+  toast(`Deleted ${n} propert${n>1?"ies":"y"}`,{label:"Undo",fn:()=>restoreCustomers(saved)});};
 $("#modeCancel").onclick=()=>setMode(mode);
 $("#tAdd").onclick=()=>setMode("add");$("#tDel").onclick=()=>setMode("del");$("#tSV").onclick=()=>setMode("sv");$("#tDraw").onclick=()=>setMode("draw");
 
@@ -719,8 +722,9 @@ function renderCard(p,geom){
   $("#svcToday").onclick=()=>{const was=customers[p.pid].urgent;Object.assign(customers[p.pid],read(),{last:isoDay(Date.now()),urgent:false,urgentNote:"",urgentBy:""});after(was?"Marked serviced today. Urgent flag cleared.":"Marked serviced today");};
   $("#cUrgBtn").onclick=()=>{const on=!customers[p.pid].urgent;Object.assign(customers[p.pid],read(),{urgent:on},on?{}:{urgentNote:"",urgentBy:""});after(on?"Marked urgent":"Urgent cleared");if(on)setTimeout(()=>{const n=$("#cUrgNote");n&&n.focus();},60);};
   const rm=$("#rmCust");rm.onclick=()=>{
-    if(rm.dataset.arm){delete customers[p.pid];after("Removed from customers");}
-    else{rm.dataset.arm="1";rm.textContent="Click again to remove";setTimeout(()=>{if(rm.isConnected){delete rm.dataset.arm;rm.textContent="Remove";}},3000);}
+    if(rm.dataset.arm){const saved={[p.pid]:customers[p.pid]};delete customers[p.pid];persist();renderCustomers();renderList();select(null);
+      toast("Removed from your customers",{label:"Undo",fn:()=>restoreCustomers(saved)});}
+    else{rm.dataset.arm="1";rm.className="btn red";rm.textContent="Click again to remove";setTimeout(()=>{if(rm.isConnected){delete rm.dataset.arm;rm.className="btn warn";rm.textContent="Remove";}},4000);}
   };
 }
 
@@ -1359,7 +1363,10 @@ addEventListener("drop",e=>{if(!hasFiles(e))return;e.preventDefault();dragN=0;do
   handleSheet(f);});
 
 /* ---------- Keyboard ---------- */
-let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600);}
+let toastT;function toast(m,act){const t=$("#toast");t.replaceChildren(document.createTextNode(m));
+  if(act){const b=document.createElement("button");b.type="button";b.textContent=act.label;b.onclick=()=>{t.hidden=true;act.fn();};t.appendChild(b);}
+  t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,act?7000:2600);}
+function restoreCustomers(saved){Object.assign(customers,saved);persist();renderCustomers();renderList();const k=Object.keys(saved);toast(k.length>1?`Restored ${k.length} properties`:"Restored");if(k.length===1){flyToPid(k[0]);select(k[0]);}}
 addEventListener("keydown",e=>{
   if(!$("#importModal").hidden){if(e.key==="Escape")closeImport();return;}
   if(e.target.matches("input,textarea,select")||e.metaKey||e.ctrlKey||e.altKey)return;
