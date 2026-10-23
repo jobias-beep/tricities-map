@@ -1406,7 +1406,7 @@ addEventListener("keydown",e=>{
 /* ---------- Shared customer list (Supabase) ---------- */
 // Project URL and publishable (anon) key. The key is meant to be public: the database's
 // security rules only let signed-in team members read or change records.
-const SUPA={url:"",key:""};
+const SUPA={url:"https://zmspejtzbicibffqpbjz.supabase.co",key:"sb_publishable_ILZQeDipwb9XcAxgXCa0sA_GTjjLXVm"};
 const KINDS={customer:()=>customers,lot:()=>customLots,group:()=>groups};
 // Stable JSON (sorted keys), so a record reads the same before and after the database stores it
 const canon=v=>v===undefined?undefined:JSON.stringify(v,(k,x)=>x&&typeof x==="object"&&!Array.isArray(x)?Object.keys(x).sort().reduce((o,kk)=>(o[kk]=x[kk],o),{}):x);
