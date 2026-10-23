@@ -845,7 +845,8 @@ function openDrawer(v,toggle){
   LS.set("tcpm.drawer",v);
 }
 Object.entries(VIEWS).forEach(([k,[,btn]])=>$(btn).onclick=()=>openDrawer(k,true));
-if(view)openDrawer(view);else{document.body.classList.add("drawer-closed");openDrawer("list");document.body.classList.add("drawer-closed");$("#dList").setAttribute("aria-pressed","false");}
+// Reopen the last panel only after every part of the page is set up (see end of script)
+function initDrawer(){try{if(view&&VIEWS[view])openDrawer(view);else{openDrawer("list");document.body.classList.add("drawer-closed");$("#dList").setAttribute("aria-pressed","false");}}catch(e){console.warn(e);openDrawer("list");}}
 function setUI(show){document.body.classList.toggle("no-ui",!show);$("#showUI").hidden=show;LS.set("tcpm.noui",!show);}
 $("#tHide").onclick=()=>setUI(false);$("#showUI").onclick=()=>setUI(true);
 if(LS.get("tcpm.noui",false))setUI(false);
@@ -1368,7 +1369,7 @@ addEventListener("keydown",e=>{
   else if(k==="a")setMode("add");else if(k==="d")setMode("del");else if(k==="v")setMode("sv");else if(k==="l")setMode("draw");
   else if(mode==="draw"&&k==="backspace"){drawPts.pop();updateDraw();}else if(mode==="draw"&&k==="enter")finishDraw();
 });
-renderList();persist();loadSourceDates();
+renderList();persist();loadSourceDates();initDrawer();
 setInterval(()=>{renderCustomers();renderList();},30*60*1000);
 })();
 </script>
