@@ -950,8 +950,19 @@ $("#icsBtn").onclick=()=>{
 let orsKey=LS.get("tcpm.ors","")||"";$("#orskey").value=orsKey;
 let home=LS.get("tcpm.home",null),homeLabel=LS.get("tcpm.homeLabel","")||"";
 function setHome(ll,label){home=ll;homeLabel=ll?(label||""):"";LS.set("tcpm.home",home);LS.set("tcpm.homeLabel",homeLabel);routeOut=null;drawRoute(null);renderRoute();}
-async function reverseLabel(ll){try{const j=await fetchJSON(`https://photon.komoot.io/reverse?lon=${ll[0].toFixed(6)}&lat=${ll[1].toFixed(6)}&lang=en`,1);const p=j.features&&j.features[0]&&j.features[0].properties;
-  if(!p)return "";return [[p.housenumber,p.street].filter(Boolean).join(" ")||p.name,p.city||p.county].filter(Boolean).join(", ");}catch(e){return "";}}
+// Address of the county parcel under a point (empty if none has a street address)
+async function reverseLabel(ll){const pt=ll[0]+","+ll[1];
+  for(const s of SOURCES.filter(x=>hit([ll[0],ll[1],ll[0],ll[1]],x.bbox))){
+    try{const{feats}=await arcQuery(s,{where:s.where||"1=1",geometry:pt,geometryType:"esriGeometryPoint",inSR:"4326",spatialRel:"esriSpatialRelIntersects",resultRecordCount:"1"});
+      const f=feats.find(f=>f.properties.address);if(f)return titleCase(f.properties.address)+", "+cityOf(f.properties);}catch(e){}}
+  return "";}
+// Find a typed address: county records first, then the place search
+async function findAddress(q){const parts=q.split(","),street=parts[0],city=parts.slice(1).join(" ");const n=normStreet(street);
+  if(n.num){try{const kw=keyword(street),srcs=pickSources(city);let best=pickBest(await candQuery(srcs,n.num,kw),n,city);
+      if(!best&&srcs.length<SOURCES.length)best=pickBest(await candQuery(SOURCES,n.num,kw),n,city);
+      if(best){const[cx,cy]=centroid(best.geometry);return{coords:[cx,cy],label:titleCase(best.properties.address)+", "+cityOf(best.properties)};}}catch(e){}}
+  try{const h=(await placeSearch(q))[0];if(h)return{coords:h.coords,label:q};}catch(e){}
+  return null;}
 $("#saveOrs").onclick=()=>{orsKey=$("#orskey").value.trim();LS.set("tcpm.ors",orsKey);toast(orsKey?"Route key saved":"Route key cleared");};
 $("#clearOrs").onclick=()=>{orsKey="";$("#orskey").value="";LS.set("tcpm.ors","");toast("Route key removed");};
 const routeSel=new Set();let routeTouched=false,routeOut=null;
@@ -971,9 +982,9 @@ function renderRoute(){
   body.appendChild(hb);
   if(home)$("#homeClear").onclick=()=>{setHome(null);toast("Home base removed");};
   $("#homeForm").onsubmit=async e=>{e.preventDefault();const q=$("#homeQ").value.trim();if(q.length<4){$("#homeQ").focus();return;}
-    toast("Finding that address…");let hit=null;try{hit=(await placeSearch(/,|\bwa\b/i.test(q)?q:q+", WA"))[0];}catch(err){}
-    if(!hit){toast("Couldn't find that address. Try adding the city.");return;}
-    setHome(hit.coords,q);toast("Home base set");};
+    toast("Finding that address…");const found=await findAddress(q);
+    if(!found){toast("Couldn't find that address. Check the spelling and add the city, e.g. 1520 N 4th Ave, Pasco");return;}
+    setHome(found.coords,found.label);toast("Home base set to "+found.label);};
   $("#homeCenter").onclick=async()=>{const c=map.getCenter(),ll=[c.lng,c.lat];const lab=await reverseLabel(ll);setHome(ll,lab);toast(lab?`Home base set near ${lab}`:"Home base set to the map center");};
   if(!all.length){const e=document.createElement("div");e.className="empty";e.innerHTML="<b>No customers yet.</b> Add properties first, then come back to plan a route.";body.appendChild(e);return;}
   const g=document.createElement("div");g.className="grp";g.textContent="Stops";body.appendChild(g);
