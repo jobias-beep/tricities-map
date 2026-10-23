@@ -948,7 +948,10 @@ $("#icsBtn").onclick=()=>{
 
 /* ---------- Route planning ---------- */
 let orsKey=LS.get("tcpm.ors","")||"";$("#orskey").value=orsKey;
-let home=LS.get("tcpm.home",null);
+let home=LS.get("tcpm.home",null),homeLabel=LS.get("tcpm.homeLabel","")||"";
+function setHome(ll,label){home=ll;homeLabel=ll?(label||""):"";LS.set("tcpm.home",home);LS.set("tcpm.homeLabel",homeLabel);routeOut=null;drawRoute(null);renderRoute();}
+async function reverseLabel(ll){try{const j=await fetchJSON(`https://photon.komoot.io/reverse?lon=${ll[0].toFixed(6)}&lat=${ll[1].toFixed(6)}&lang=en`,1);const p=j.features&&j.features[0]&&j.features[0].properties;
+  if(!p)return "";return [[p.housenumber,p.street].filter(Boolean).join(" ")||p.name,p.city||p.county].filter(Boolean).join(", ");}catch(e){return "";}}
 $("#saveOrs").onclick=()=>{orsKey=$("#orskey").value.trim();LS.set("tcpm.ors",orsKey);toast(orsKey?"Route key saved":"Route key cleared");};
 $("#clearOrs").onclick=()=>{orsKey="";$("#orskey").value="";LS.set("tcpm.ors","");toast("Route key removed");};
 const routeSel=new Set();let routeTouched=false,routeOut=null;
@@ -960,11 +963,18 @@ function renderRoute(){
   if(!routeTouched){routeSel.clear();all.forEach(x=>{if(x.c.urgent||["over","due","new"].includes(x.st.key))routeSel.add(x.pid);});}
   [...routeSel].forEach(pid=>{if(!customers[pid])routeSel.delete(pid);});
   $("#routeCount").textContent=routeSel.size?`${routeSel.size} stop${routeSel.size>1?"s":""}`:"";
-  const hb=document.createElement("div");hb.className="next";
-  hb.innerHTML=`<span>${home?"Start and end at your saved home base":"No home base set. The route starts at the first stop."}</span>`;
-  const hbtn=document.createElement("button");hbtn.className="lnk";hbtn.type="button";hbtn.textContent=home?"Move to map center":"Set to map center";
-  hbtn.onclick=()=>{const c=map.getCenter();home=[c.lng,c.lat];LS.set("tcpm.home",home);toast("Home base set to the center of the map");renderRoute();};
-  hb.appendChild(hbtn);body.appendChild(hb);
+  const hb=document.createElement("div");hb.className="f";
+  hb.innerHTML=`<label for="homeQ">Start and end point (home base)</label>
+    <div class="next" style="flex-wrap:wrap;gap:6px"><span>${home?`Routes start and end at <b>${esc(homeLabel||"a spot you picked on the map")}</b>`:"None set. The route starts at the first stop and ends at the last."}</span>${home?`<button class="lnk" id="homeClear" type="button">Remove</button>`:""}</div>
+    <form class="savebox" id="homeForm"><input type="text" id="homeQ" placeholder="Type your shop or home address" autocomplete="off"><button class="btn sec2" type="submit">Set</button></form>
+    <button class="lnk" id="homeCenter" type="button" style="align-self:flex-start">Use the center of the map instead</button>`;
+  body.appendChild(hb);
+  if(home)$("#homeClear").onclick=()=>{setHome(null);toast("Home base removed");};
+  $("#homeForm").onsubmit=async e=>{e.preventDefault();const q=$("#homeQ").value.trim();if(q.length<4){$("#homeQ").focus();return;}
+    toast("Finding that address…");let hit=null;try{hit=(await placeSearch(/,|\bwa\b/i.test(q)?q:q+", WA"))[0];}catch(err){}
+    if(!hit){toast("Couldn't find that address. Try adding the city.");return;}
+    setHome(hit.coords,q);toast("Home base set");};
+  $("#homeCenter").onclick=async()=>{const c=map.getCenter(),ll=[c.lng,c.lat];const lab=await reverseLabel(ll);setHome(ll,lab);toast(lab?`Home base set near ${lab}`:"Home base set to the map center");};
   if(!all.length){const e=document.createElement("div");e.className="empty";e.innerHTML="<b>No customers yet.</b> Add properties first, then come back to plan a route.";body.appendChild(e);return;}
   const g=document.createElement("div");g.className="grp";g.textContent="Stops";body.appendChild(g);
   const order={over:0,due:1,new:2,ok:3,done:4};
@@ -984,15 +994,19 @@ function renderRoute(){
     const h=document.createElement("div");h.className="grp";h.textContent="Best order";body.appendChild(h);
     if(routeOut.summary){const s=document.createElement("p");s.textContent=`About ${(routeOut.summary.dist/1609.34).toFixed(1)} miles and ${Math.round(routeOut.summary.dur/60)} minutes of driving.`;body.appendChild(s);}
     else{const s=document.createElement("p");s.textContent="Ordered by straight-line distance. Add an openrouteservice key in Settings for driving order and times.";body.appendChild(s);}
+    if(home){const s=document.createElement("p");s.style.fontSize="13px";s.innerHTML=`Starts and ends at <b>${esc(homeLabel||"your home base")}</b>.`;body.appendChild(s);}
     const ol=document.createElement("ol");ol.className="steps";
     routeOut.stops.forEach(st=>{const c=customers[st.pid];if(!c)return;const li=document.createElement("li");li.textContent=titleCase(c.info.address||"No address")+(c.name?" — "+c.name:"");ol.appendChild(li);});
     body.appendChild(ol);
     // Google Maps directions, max 9 waypoints per link
-    const pts=[...(home?[home]:[]),...routeOut.stops.map(s=>s.ll),...(home?[home]:[])];
+    // Send real street addresses to Google Maps; GPS points get relabeled with whatever address Google finds nearest
+    const ll=x=>x[1].toFixed(6)+","+x[0].toFixed(6);
+    const stopTxt=st=>{const c=customers[st.pid],i=c&&c.info;if(!i||!i.address||i.custom)return ll(st.ll);return titleCase(String(i.address))+", "+cityOf(i);};
+    const homeTxt=homeLabel||(home?ll(home):"");
+    const pts=[...(home?[homeTxt]:[]),...routeOut.stops.map(stopTxt),...(home?[homeTxt]:[])];
     const links=document.createElement("div");links.className="btns";
     for(let i=0;i<pts.length-1;i+=10){const seg=pts.slice(i,i+11);if(seg.length<2)break;
-      const f=x=>x[1].toFixed(6)+","+x[0].toFixed(6);
-      const url="https://www.google.com/maps/dir/?api=1&travelmode=driving&origin="+encodeURIComponent(f(seg[0]))+"&destination="+encodeURIComponent(f(seg[seg.length-1]))+(seg.length>2?"&waypoints="+encodeURIComponent(seg.slice(1,-1).map(f).join("|")):"");
+      const url="https://www.google.com/maps/dir/?api=1&travelmode=driving&origin="+encodeURIComponent(seg[0])+"&destination="+encodeURIComponent(seg[seg.length-1])+(seg.length>2?"&waypoints="+encodeURIComponent(seg.slice(1,-1).join("|")):"");
       const a=document.createElement("a");a.className="btn sec2";a.href=url;a.target="_blank";a.rel="noopener";a.style.textDecoration="none";
       a.textContent=pts.length>11?`Open part ${i/10+1} in Google Maps ↗`:"Open in Google Maps ↗";links.appendChild(a);}
     body.appendChild(links);
