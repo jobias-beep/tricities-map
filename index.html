@@ -308,6 +308,8 @@ body.dragging::after{content:"Drop your spreadsheet to import customers";positio
   <section class="dv" id="vSettings" hidden>
     <header><h2>Settings</h2></header>
     <div class="body">
+      <div class="grp">Shared customer list</div>
+      <div id="syncBox"></div>
       <div class="grp">Import customers</div>
       <div class="drop" id="dropZone" role="button" tabindex="0" aria-label="Choose a spreadsheet to import">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4"/></svg>
@@ -446,7 +448,7 @@ const KEY="tricities-property-map.v1";
 let customers=LS.get(KEY,{})||{};
 // v1 stored Pasco ids with punctuation; match the new digits-only ids
 Object.keys(customers).forEach(k=>{if(k.startsWith("P-")){const nk="P-"+digits(k.slice(2));if(nk!==k){customers[nk]=customers[k];customers[nk].info.pid=nk;delete customers[k];}}});
-function persist(){const ok=LS.set(KEY,customers);$("#saved").textContent=ok?`${Object.keys(customers).length} customers saved in this browser.`:"Couldn't save in this browser. Download a backup.";}
+function persist(){const ok=LS.set(KEY,customers);const n=Object.keys(customers).length;$("#saved").textContent=!ok?"Couldn't save in this browser. Download a backup.":syncOn()?`${n} customers, shared with your team.`:`${n} customers saved in this browser.`;syncChanged();}
 const PLANS={once:{label:"One-time",days:0},monthly:{label:"Monthly",days:30},bimonthly:{label:"Every 2 months",days:61},quarterly:{label:"Quarterly",days:91},semiannual:{label:"Every 6 months",days:182},yearly:{label:"Yearly",days:365}};
 const DAY=864e5;
 const today=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime();};
@@ -1067,7 +1069,7 @@ function boundsOf(pids){const b=new maplibregl.LngLatBounds();pids.forEach(pid=>
 
 /* ---------- Drawn lots ---------- */
 let customLots=LS.get("tcpm.lots",{})||{};
-function saveLots(){LS.set("tcpm.lots",customLots);}
+function saveLots(){LS.set("tcpm.lots",customLots);syncChanged();}
 function renderLots(){if(map.getSource("lots"))map.getSource("lots").setData({type:"FeatureCollection",features:Object.values(customLots)});}
 let drawPts=[];
 function updateDraw(){
@@ -1114,7 +1116,7 @@ function bindLotEditor(p){
 /* ---------- Groups (owners and property managers) ---------- */
 let groups=LS.get("tcpm.groups",{})||{};
 const GCOLORS=["#a855f7","#14b8a6","#f97316","#ec4899","#84cc16","#06b6d4","#eab308","#6366f1"];
-function saveGroups(){LS.set("tcpm.groups",groups);}
+function saveGroups(){LS.set("tcpm.groups",groups);syncChanged();}
 function makeGroup(name,kind){const gid="G-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   groups[gid]={name,kind:kind||"Owner",contact:"",phone:"",notes:"",color:GCOLORS[Object.keys(groups).length%GCOLORS.length]};saveGroups();return gid;}
 function groupByName(name){const n=String(name).trim().toLowerCase();return Object.keys(groups).find(g=>groups[g].name.trim().toLowerCase()===n);}
@@ -1401,7 +1403,149 @@ addEventListener("keydown",e=>{
   else if(k==="a")setMode("add");else if(k==="d")setMode("del");else if(k==="v")setMode("sv");else if(k==="l")setMode("draw");
   else if(mode==="draw"&&k==="backspace"){drawPts.pop();updateDraw();}else if(mode==="draw"&&k==="enter")finishDraw();
 });
-renderList();persist();loadSourceDates();initDrawer();
+/* ---------- Shared customer list (Supabase) ---------- */
+// Project URL and publishable (anon) key. The key is meant to be public: the database's
+// security rules only let signed-in team members read or change records.
+const SUPA={url:"",key:""};
+const KINDS={customer:()=>customers,lot:()=>customLots,group:()=>groups};
+// Stable JSON (sorted keys), so a record reads the same before and after the database stores it
+const canon=v=>v===undefined?undefined:JSON.stringify(v,(k,x)=>x&&typeof x==="object"&&!Array.isArray(x)?Object.keys(x).sort().reduce((o,kk)=>(o[kk]=x[kk],o),{}):x);
+const emptySnap=()=>({init:false,customer:{},lot:{},group:{}});
+// snap = what the cloud held the last time this browser synced, so we can tell local edits from remote ones
+let snap=LS.get("tcpm.sync.snap",null)||emptySnap();
+let sb=null,sUser=null,sMember=false,sState="off",sMsg="",sChan=null,sTimer=null,sBusy=null,sQuiet=false,sLastFull=0,sDirty=new Set(),sDrawT=null;
+const saveSnap=()=>LS.set("tcpm.sync.snap",snap);
+function syncOn(){return!!(sb&&sUser&&sMember);}
+function syncChanged(){if(sQuiet||!syncOn())return;clearTimeout(sTimer);sTimer=setTimeout(()=>run(pushLocal),700);}
+function setSync(st,msg){sState=st;sMsg=msg||"";renderSync();}
+function loadSupa(){return window.supabase?Promise.resolve(window.supabase):new Promise((res,rej)=>{const sc=document.createElement("script");
+  sc.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";sc.onload=()=>res(window.supabase);sc.onerror=()=>rej(new Error("load"));document.head.appendChild(sc);});}
+// One sync at a time; a request made while one runs waits for it
+async function run(fn){while(sBusy)await sBusy.catch(()=>{});sBusy=fn().finally(()=>{sBusy=null;});return sBusy.catch(()=>{});}
+function quietSave(kinds){sQuiet=true;try{if(kinds.has("customer"))persist();if(kinds.has("lot"))saveLots();if(kinds.has("group"))saveGroups();}finally{sQuiet=false;}}
+function failed(e){console.warn("sync",e);setSync("error",navigator.onLine?"Couldn't reach the shared list. Your changes are kept in this browser and will save when it reconnects.":"You're offline. Changes are kept in this browser and will save when you reconnect.");}
+
+async function syncInit(){
+  if(!SUPA.url){renderSync();return;}
+  setSync("loading");
+  try{const lib=await loadSupa();sb=lib.createClient(SUPA.url,SUPA.key,{auth:{persistSession:true,autoRefreshToken:true,storageKey:"tcpm.auth"}});}
+  catch(e){setSync("error","Couldn't load sign-in. Check your internet connection and refresh.");return;}
+  let first=true;
+  sb.auth.onAuthStateChange((ev,session)=>{const u=session?session.user:null;
+    if(first||(u&&u.id)!==(sUser&&sUser.id)){first=false;sUser=u;setTimeout(onUser,0);}});
+  addEventListener("online",()=>{if(syncOn())run(fullSync);});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&syncOn()&&Date.now()-sLastFull>30000)run(fullSync);});
+}
+async function onUser(){
+  if(sChan){sb.removeChannel(sChan);sChan=null;}
+  sMember=false;
+  if(!sUser){setSync("out");persist();if(Object.keys(customers).length===0)toast("Sign in under Settings to see your shared customers.");return;}
+  setSync("loading");
+  const{data,error}=await sb.from("members").select("email").limit(1);
+  if(error){failed(error);return;}
+  if(!data.length){setSync("nomember");return;}
+  sMember=true;
+  sChan=sb.channel("records").on("postgres_changes",{event:"*",schema:"public",table:"records"},onRemote).subscribe();
+  await run(fullSync);persist();
+}
+async function fetchAll(){
+  const out=[];
+  for(let from=0;;from+=1000){
+    const{data,error}=await sb.from("records").select("kind,id,data").order("kind").order("id").range(from,from+999);
+    if(error)throw error;out.push(...data);if(data.length<1000)break;}
+  return out;
+}
+// Merge cloud and local: whichever side changed since the last sync wins.
+// If both changed, this browser's edit wins, except on its first sync, where the shared list wins.
+async function fullSync(){
+  setSync("saving");
+  try{
+    const cloud={customer:{},lot:{},group:{}};
+    (await fetchAll()).forEach(r=>{if(cloud[r.kind])cloud[r.kind][r.id]=r.data;});
+    const touched=new Set(),up=[],del=[];
+    Object.keys(KINDS).forEach(kind=>{
+      const L=KINDS[kind](),S=snap[kind],C=cloud[kind];
+      new Set([...Object.keys(L),...Object.keys(S),...Object.keys(C)]).forEach(id=>{
+        const l=canon(L[id]),s=S[id],c=canon(C[id]);
+        const takeCloud=()=>{if(l!==c){if(c===undefined)delete L[id];else L[id]=C[id];touched.add(kind);sDirty.add(id);}if(c===undefined)delete S[id];else S[id]=c;};
+        if(l===s||l===c||(c!==s&&!snap.init))takeCloud();
+        else if(l===undefined)del.push([kind,id]);else up.push({kind,id,data:L[id]});
+      });
+    });
+    if(touched.size){quietSave(touched);redraw();}
+    await write(up,del);
+    snap.init=true;saveSnap();sLastFull=Date.now();setSync("ok");
+  }catch(e){failed(e);}
+}
+// Send this browser's changes since the last sync
+async function pushLocal(){
+  const up=[],del=[];
+  Object.keys(KINDS).forEach(kind=>{const L=KINDS[kind](),S=snap[kind];
+    new Set([...Object.keys(L),...Object.keys(S)]).forEach(id=>{const l=canon(L[id]);if(l===S[id])return;
+      if(l===undefined)del.push([kind,id]);else up.push({kind,id,data:L[id]});});});
+  if(!up.length&&!del.length){if(sState!=="ok")setSync("ok");return;}
+  setSync("saving");
+  try{await write(up,del);saveSnap();setSync("ok");}catch(e){failed(e);}
+}
+async function write(up,del){
+  for(let i=0;i<up.length;i+=200){const part=up.slice(i,i+200);
+    const{error}=await sb.from("records").upsert(part,{onConflict:"kind,id"});if(error)throw error;
+    part.forEach(r=>{snap[r.kind][r.id]=canon(r.data);});}
+  for(const kind of Object.keys(KINDS)){const ids=del.filter(d=>d[0]===kind).map(d=>d[1]);
+    for(let i=0;i<ids.length;i+=200){const part=ids.slice(i,i+200);
+      const{error}=await sb.from("records").delete().eq("kind",kind).in("id",part);if(error)throw error;
+      part.forEach(id=>{delete snap[kind][id];});}}
+}
+// A teammate's change, pushed live. Skipped if this browser has its own unsaved edit to the same record.
+function onRemote(p){
+  const r=p.eventType==="DELETE"?p.old:p.new;if(!r||!KINDS[r.kind])return;
+  const L=KINDS[r.kind](),S=snap[r.kind],id=r.id,l=canon(L[id]);
+  if(l!==S[id])return;
+  if(p.eventType==="DELETE"){if(L[id]===undefined)return;delete L[id];delete S[id];}
+  else{const c=canon(r.data);if(c===l)return;L[id]=r.data;S[id]=c;}
+  saveSnap();quietSave(new Set([r.kind]));sDirty.add(id);redraw();
+}
+function redraw(){clearTimeout(sDrawT);sDrawT=setTimeout(()=>{
+  renderCustomers();renderLots();renderList();if(view==="groups")renderGroups();
+  if(selected&&sDirty.has(selected)){
+    if(!featureFor(selected))select(null);
+    else if($("#prop").contains(document.activeElement))toast("A teammate just updated this customer. Reopen the card to see it.");
+    else select(selected);}
+  sDirty.clear();},250);}
+
+function renderSync(){
+  const box=$("#syncBox");if(!box)return;
+  const who=sUser?esc(sUser.email||""):"";
+  if(sState==="off"){box.innerHTML=`<p>Not set up yet. Customers are saved in this browser only.</p>`;return;}
+  if(sState==="out"){
+    box.innerHTML=`<p>Sign in to see the customer list you share with your team. It updates live on every device.</p>
+      <form id="sIn" style="display:flex;flex-direction:column;gap:8px"><div class="f"><label for="sEmail">Email</label><input type="email" id="sEmail" autocomplete="username" required></div>
+      <div class="f"><label for="sPass">Password</label><input type="password" id="sPass" autocomplete="current-password" required></div>
+      <div class="btns"><button class="btn" type="submit">Sign in</button></div><p id="sInMsg" style="font-size:13px;color:var(--s-over)"></p></form>
+      <p style="font-size:13px">No login yet? Ask the account owner to add you.</p>`;
+    $("#sIn").onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector("button");b.disabled=true;b.textContent="Signing in…";
+      const{error}=await sb.auth.signInWithPassword({email:$("#sEmail").value.trim(),password:$("#sPass").value});
+      if(error){b.disabled=false;b.textContent="Sign in";$("#sInMsg").textContent=/invalid/i.test(error.message)?"That email and password don't match.":"Couldn't sign in: "+error.message;}};
+    return;}
+  const out=`<div class="btns"><button class="btn warn" id="sOut" type="button">Sign out</button></div>`;
+  const msg={loading:"Connecting…",saving:"Saving…",ok:"All changes saved.",error:sMsg,
+    nomember:"This login isn't on your team list yet, so it can't see the shared customers. Ask the account owner to add this email."}[sState]||"";
+  box.innerHTML=(sState==="nomember"?"":`<p>Signed in as <b>${who}</b>. Customers, groups and drawn lots are shared with your team and update live.</p>`)+
+    (sState==="nomember"?`<p>Signed in as <b>${who}</b>.</p>`:"")+
+    `<p id="sStat" style="font-size:13px;color:${sState==="error"||sState==="nomember"?"var(--s-over)":"var(--ink-3)"}">${esc(msg)}</p>`+
+    (sState==="error"?`<div class="btns"><button class="btn sec2" id="sRetry" type="button">Try again</button></div>`:"")+out;
+  const rt=$("#sRetry");if(rt)rt.onclick=()=>run(fullSync);
+  $("#sOut").onclick=async e=>{const b=e.currentTarget;
+    if(!b.dataset.arm){b.dataset.arm="1";b.textContent="Sign out and clear this browser? Click again";return;}
+    b.disabled=true;
+    if(syncOn()){await run(pushLocal);if(sState==="error"&&!confirm("Some changes haven't saved to the shared list yet. Sign out anyway and lose them?")){renderSync();return;}}
+    sMember=false;await sb.auth.signOut();
+    // The shared list stays in the cloud; this browser keeps no copy after signing out
+    Object.keys(customers).forEach(k=>delete customers[k]);Object.keys(customLots).forEach(k=>delete customLots[k]);Object.keys(groups).forEach(k=>delete groups[k]);
+    snap=emptySnap();saveSnap();quietSave(new Set(Object.keys(KINDS)));select(null);redraw();toast("Signed out");};
+}
+
+renderList();persist();loadSourceDates();initDrawer();syncInit();
 setInterval(()=>{renderCustomers();renderList();},30*60*1000);
 })();
 </script>
