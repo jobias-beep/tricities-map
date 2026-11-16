@@ -1,0 +1,16 @@
+{
+  "name": "Prestige Property Map",
+  "short_name": "Prestige Map",
+  "description": "Tri-Cities customer and property map for Prestige pest control.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#121a23",
+  "theme_color": "#121a23",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

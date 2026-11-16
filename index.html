@@ -2,8 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Tri-Cities Property Map</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#121a23">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prestige Map">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -226,6 +234,27 @@ body.dragging::after{content:"Drop your spreadsheet to import customers";positio
   body.card-open .maplibregl-ctrl-top-right{right:0}
   #modeBar{top:auto;bottom:150px}
   .pillmsg{bottom:150px!important}
+  /* iPhone: keep clear of the notch and home bar; 16px fields stop iOS zooming in when you tap one */
+  #rail{bottom:calc(10px + env(safe-area-inset-bottom));left:calc(10px + env(safe-area-inset-left));right:calc(10px + env(safe-area-inset-right))}
+  #top{top:calc(10px + env(safe-area-inset-top))}
+  #showUI{top:calc(14px + env(safe-area-inset-top))}
+  #drawer,#prop{bottom:calc(84px + env(safe-area-inset-bottom))}
+  #tools{top:calc(70px + env(safe-area-inset-top))}
+  #modeBar{bottom:calc(150px + env(safe-area-inset-bottom))}
+  #toast{top:calc(64px + env(safe-area-inset-top))}
+  input[type=text],input[type=date],input[type=password],input[type=email],input[type=search],input:not([type]),select,textarea,#q{font-size:16px}
+}
+/* Opened from the home screen: no browser bar, so the map runs under the status bar */
+@media (display-mode:standalone){
+  #rail{top:calc(14px + env(safe-area-inset-top))}
+  #top,#prop{top:calc(14px + env(safe-area-inset-top))}
+  #drawer{top:calc(76px + env(safe-area-inset-top))}
+  body{overscroll-behavior:none}
+}
+@media (display-mode:standalone) and (max-width:820px){
+  #rail{top:auto}
+  #top{top:calc(10px + env(safe-area-inset-top))}
+  #prop,#drawer{top:auto}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -1548,6 +1577,9 @@ function renderSync(){
 renderList();persist();loadSourceDates();initDrawer();syncInit();
 setInterval(()=>{renderCustomers();renderList();},30*60*1000);
 })();
+</script>
+<script>
+if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}
 </script>
 </body>
 </html>
