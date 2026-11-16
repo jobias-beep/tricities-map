@@ -469,6 +469,8 @@ const digits=s=>String(s??"").replace(/\D/g,"");
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}};
 
 /* ---------- Public parcel sources ---------- */
+// Washington county FIPS codes (the statewide layer's COUNTY_NM)
+const WA_COUNTIES={1:"Adams",3:"Asotin",5:"Benton",7:"Chelan",9:"Clallam",11:"Clark",13:"Columbia",15:"Cowlitz",17:"Douglas",19:"Ferry",21:"Franklin",23:"Garfield",25:"Grant",27:"Grays Harbor",29:"Island",31:"Jefferson",33:"King",35:"Kitsap",37:"Kittitas",39:"Klickitat",41:"Lewis",43:"Lincoln",45:"Mason",47:"Okanogan",49:"Pacific",51:"Pend Oreille",53:"Pierce",55:"San Juan",57:"Skagit",59:"Skamania",61:"Snohomish",63:"Spokane",65:"Stevens",67:"Thurston",69:"Wahkiakum",71:"Walla Walla",73:"Whatcom",75:"Whitman",77:"Yakima"};
 const SOURCES=[
   {key:"benton",name:"Benton County Assessor",covers:"Richland, Kennewick, West Richland, Finley, Benton City",
    url:"https://services7.arcgis.com/NURlY7V8UHl6XumF/ArcGIS/rest/services/Parcels_and_Assess_view/FeatureServer/0",
@@ -483,12 +485,14 @@ const SOURCES=[
    fields:"PARCELNUMBER,SITUS,TAXPAYER_NAME,YEARBUILT,LOT_SIZE_SF,TOTAL_MARKET_VALUE,BEDROOMS,BATHROOMS,FINAL_AREA,STRUCTURE_TYPE,SUBDIVISION,TaxsifterLink",
    addrField:"SITUS",ownerField:"TAXPAYER_NAME",
    norm:p=>({pid:"P-"+digits(p.PARCELNUMBER),parcel:p.PARCELNUMBER,address:p.SITUS,cityLine:"Pasco, WA",owner:p.TAXPAYER_NAME,year:p.YEARBUILT,lot:p.LOT_SIZE_SF,value:p.TOTAL_MARKET_VALUE,beds:p.BEDROOMS,baths:p.BATHROOMS,sqft:p.FINAL_AREA,use:p.STRUCTURE_TYPE,hood:p.SUBDIVISION,link:p.TaxsifterLink,county:"Franklin County"})},
-  {key:"wa",name:"Washington State statewide parcels",covers:"Franklin County outside Pasco (Burbank side, county areas)",
+  {key:"wa",name:"Washington State statewide parcels",covers:"Every other county in Washington, including Franklin County outside Pasco (no owner names)",
    url:"https://services.arcgis.com/jsIt88o09Q0r1j8h/ArcGIS/rest/services/Current_Parcels/FeatureServer/0",
-   bbox:[-119.45,46.18,-118.6,46.75],oid:"OBJECTID",where:"COUNTY_NM='21'",
-   fields:"PARCEL_ID_NR,SITUS_ADDRESS,SITUS_CITY_NM,SITUS_ZIP_NR,LANDUSE_CD,VALUE_LAND,VALUE_BLDG,DATA_LINK",
+   // Benton County comes from its own assessor feed (with owner names), so skip it here
+   bbox:[-124.9,45.5,-116.9,49.05],oid:"OBJECTID",where:"COUNTY_NM NOT IN ('5','05','005')",whereAlt:"1=1",near:true,cityField:"SITUS_CITY_NM",
+   fields:"COUNTY_NM,PARCEL_ID_NR,SITUS_ADDRESS,SITUS_CITY_NM,SITUS_ZIP_NR,LANDUSE_CD,VALUE_LAND,VALUE_BLDG,DATA_LINK",
    addrField:"SITUS_ADDRESS",
-   norm:p=>({pid:"F-"+digits(p.PARCEL_ID_NR),parcel:p.PARCEL_ID_NR,address:p.SITUS_ADDRESS,cityLine:p.SITUS_CITY_NM?titleCase(p.SITUS_CITY_NM)+", WA":"",value:(+p.VALUE_LAND||0)+(+p.VALUE_BLDG||0)||null,link:p.DATA_LINK,county:"Franklin County"})}
+   norm:p=>{const cn=String(+p.COUNTY_NM||21);
+     return{pid:(cn==="21"?"F-":"W"+cn+"-")+digits(p.PARCEL_ID_NR),parcel:p.PARCEL_ID_NR,address:p.SITUS_ADDRESS,cityLine:p.SITUS_CITY_NM?titleCase(p.SITUS_CITY_NM)+", WA":"",value:(+p.VALUE_LAND||0)+(+p.VALUE_BLDG||0)||null,link:p.DATA_LINK,county:(WA_COUNTIES[cn]||"Washington")+(WA_COUNTIES[cn]?" County":"")};}}
 ];
 // County servers sometimes stall: give up after 15s and retry once
 async function fetchJSON(u,tries=2){
@@ -498,6 +502,13 @@ async function fetchJSON(u,tries=2){
     finally{clearTimeout(tm);}}
 }
 async function arcQuery(src,params){
+  try{return await arcQuery1(src,params);}
+  catch(e){// if the statewide county filter is ever rejected, drop it and rely on the on-screen duplicate check
+    if(!src.whereAlt||!params.where||!params.where.includes(src.where))throw e;
+    const w=src.where;src.where=src.whereAlt;delete src.whereAlt;
+    return arcQuery1(src,{...params,where:params.where.replace(w,src.where)});}
+}
+async function arcQuery1(src,params){
   const u=new URL(src.url+"/query");
   const base={outFields:src.fields,outSR:"4326",f:"geojson",returnGeometry:"true"};
   Object.entries({...base,...params}).forEach(([k,v])=>u.searchParams.set(k,v));
@@ -630,13 +641,13 @@ map.on("load",()=>{
 
 /* ---------- Parcel loading in grid cells (pages past the 2,000 cap) ---------- */
 const CW=0.012,CH=0.008,MINZ=15;
-const parcels=new Map(),pascoIds=new Set(),cellsDone=new Set(),cellsBusy=new Set();
+const parcels=new Map(),pascoIds=new Set(),bentonIds=new Set(),cellsDone=new Set(),cellsBusy=new Set();
 let pushT=null;
 function pushParcels(){clearTimeout(pushT);pushT=setTimeout(()=>{
-  const feats=[];for(const f of parcels.values()){if(f.properties.pid[0]==="F"&&pascoIds.has(f.properties.pid.slice(2)))continue;feats.push(f);}
+  const feats=[];for(const f of parcels.values()){const q=f.properties.pid;if(q[0]==="F"&&pascoIds.has(q.slice(2)))continue;if(q.startsWith("W5-")&&bentonIds.has(q.slice(3)))continue;feats.push(f);}
   map.getSource("parcels")&&map.getSource("parcels").setData({type:"FeatureCollection",features:feats});
 },120);}
-function addFeatures(list){list.forEach(f=>{const p=f.properties;if(p.pid[0]==="P")pascoIds.add(p.pid.slice(2));parcels.set(p.pid,f);});}
+function addFeatures(list){list.forEach(f=>{const p=f.properties;if(p.pid[0]==="P")pascoIds.add(p.pid.slice(2));if(p.pid[0]==="B")bentonIds.add(digits(p.parcel));parcels.set(p.pid,f);});}
 let failNoted=false;
 async function loadCell(key){
   const[i,j]=key.split(":").map(Number);const box=[i*CW,j*CH,(i+1)*CW,(j+1)*CH];
@@ -661,7 +672,7 @@ function loadParcels(){
   const c=map.getCenter(),cx=c.lng/CW,cy=c.lat/CH;const keys=[];
   for(let i=x0;i<=x1;i++)for(let j=y0;j<=y1;j++){const k=i+":"+j;if(!cellsDone.has(k)&&!cellsBusy.has(k))keys.push([k,(i-cx)**2+(j-cy)**2]);}
   keys.sort((a,b)=>a[1]-b[1]);queue.length=0;keys.forEach(k=>queue.push(k[0]));
-  if(parcels.size>40000){parcels.clear();cellsDone.clear();}
+  if(parcels.size>40000){parcels.clear();cellsDone.clear();pascoIds.clear();bentonIds.clear();}
   pump();updateLoad();
 }
 let moveT=null;map.on("moveend",()=>{clearTimeout(moveT);moveT=setTimeout(loadParcels,180);
@@ -1045,7 +1056,10 @@ if(LS.get("tcpm.noui",false))setUI(false);
 
 /* ---------- Search: places + addresses ---------- */
 const results=$("#results");let qT=null,qSeq=0;
-const AREA="-119.6,46.05,-118.8,46.5";
+const AREA="-124.9,45.5,-116.9,49.05";
+// Box around the map view (at least ~70 km across) for statewide address lookups
+function nearBox(){const c=map.getCenter(),b=map.getBounds(),dx=Math.max(0.45,(b.getEast()-b.getWest())/2),dy=Math.max(0.32,(b.getNorth()-b.getSouth())/2);
+  return{geometry:[c.lng-dx,c.lat-dy,c.lng+dx,c.lat+dy].join(","),geometryType:"esriGeometryEnvelope",inSR:"4326",spatialRel:"esriSpatialRelIntersects"};}
 $("#q").addEventListener("input",()=>{clearTimeout(qT);qT=setTimeout(runSearch,350);});
 $("#q").addEventListener("keydown",e=>{if(e.key==="Enter"){clearTimeout(qT);runSearch();}if(e.key==="Escape"){results.hidden=true;}});
 async function placeSearch(q){
@@ -1069,7 +1083,7 @@ async function runSearch(){
   if(qRaw.length<3){results.hidden=true;return;}
   const my=++qSeq;results.hidden=false;results.innerHTML=`<li class="msg">Searching…</li>`;
   const looksAddr=/^\d+\s/.test(addr);
-  const jobs=[placeSearch(qRaw),...SOURCES.map(s=>arcQuery(s,{where:(s.where?s.where+" AND ":"")+`UPPER(${s.addrField}) LIKE '%${addr.replace(/'/g,"''")}%'`,resultRecordCount:"5"}))];
+  const jobs=[placeSearch(qRaw),...SOURCES.map(s=>arcQuery(s,{where:(s.where?s.where+" AND ":"")+`UPPER(${s.addrField}) LIKE '%${addr.replace(/'/g,"''")}%'`,resultRecordCount:"5",...(s.near?nearBox():{})}))];
   const res=await Promise.allSettled(jobs);
   if(my!==qSeq)return;
   const places=[...localPlaces(qRaw),...(res[0].status==="fulfilled"?res[0].value:[])];
@@ -1146,8 +1160,8 @@ async function reverseLabel(ll){const pt=ll[0]+","+ll[1];
   return "";}
 // Find a typed address: county records first, then the place search
 async function findAddress(q){const parts=q.split(","),street=parts[0],city=parts.slice(1).join(" ");const n=normStreet(street);
-  if(n.num){try{const kw=keyword(street),srcs=pickSources(city);let best=pickBest(await candQuery(srcs,n.num,kw),n,city);
-      if(!best&&srcs.length<SOURCES.length)best=pickBest(await candQuery(SOURCES,n.num,kw),n,city);
+  if(n.num){try{const kw=keyword(street),srcs=pickSources(city);let best=pickBest(await candQuery(srcs,n.num,kw,city),n,city);
+      if(!best&&srcs.length<SOURCES.length)best=pickBest(await candQuery(SOURCES,n.num,kw,city),n,city);
       if(best){const[cx,cy]=centroid(best.geometry);return{coords:[cx,cy],label:titleCase(best.properties.address)+", "+cityOf(best.properties)};}}catch(e){}}
   try{const h=(await placeSearch(q))[0];if(h)return{coords:h.coords,label:q};}catch(e){}
   return null;}
@@ -1454,13 +1468,17 @@ function keyword(s){let w=streetTokens(s).map((x,i,a)=>(x==="RD"||x==="ROAD")&&/
   if(w.length>1&&DIRS[w[w.length-1]])w=w.slice(0,-1);
   if(w.length>1&&SUF[w[w.length-1]])w=w.slice(0,-1);
   return w.join(" ")||null;}
+// Tri-Cities area towns: the statewide layer is only searched near the map view for these
+const TRI_BOX={geometry:"-119.95,45.85,-118.6,46.75",geometryType:"esriGeometryEnvelope",inSR:"4326",spatialRel:"esriSpatialRelIntersects"};
+const TRI=/PASCO|BURBANK|ELTOPIA|MESA|CONNELL|FRANKLIN|RICHLAND|KENNEWICK|FINLEY|BENTON|PROSSER|PLYMOUTH|PATERSON/;
 function pickSources(city){const c=city.toUpperCase();
   if(/PASCO/.test(c))return SOURCES.filter(s=>s.key==="pasco"||s.key==="wa");
   if(/BURBANK|ELTOPIA|MESA|CONNELL|FRANKLIN/.test(c))return SOURCES.filter(s=>s.key==="wa");
   if(/RICHLAND|KENNEWICK|FINLEY|BENTON|PROSSER|PLYMOUTH|PATERSON/.test(c))return SOURCES.filter(s=>s.key==="benton");
   return SOURCES;}
-async function candQuery(srcs,num,kw){
-  const res=await Promise.allSettled(srcs.map(s=>arcQuery(s,{where:(s.where?s.where+" AND ":"")+`UPPER(${s.addrField}) LIKE '${num} %'`+(kw?` AND UPPER(${s.addrField}) LIKE '%${kw.replace(/'/g,"''")}%'`:""),resultRecordCount:"60"})));
+async function candQuery(srcs,num,kw,city){
+  const cn=String(city||"").toUpperCase().replace(/\bWA\b|\bWASHINGTON\b|\d{5}(-\d{4})?|[^A-Z ]/g," ").replace(/\s+/g," ").trim();
+  const res=await Promise.allSettled(srcs.map(s=>arcQuery(s,{where:(s.where?s.where+" AND ":"")+`UPPER(${s.addrField}) LIKE '${num} %'`+(kw?` AND UPPER(${s.addrField}) LIKE '%${kw.replace(/'/g,"''")}%'`:"")+(s.cityField&&cn&&!TRI.test(cn)?` AND UPPER(${s.cityField}) LIKE '%${cn}%'`:""),resultRecordCount:"60",...(s.near&&!(cn&&!TRI.test(cn))?TRI_BOX:{})})));
   if(res.every(x=>x.status==="rejected"))throw new Error("offline");
   return res.flatMap(x=>x.status==="fulfilled"?x.value.feats:[]);}
 function pickBest(cands,n,city){
@@ -1479,9 +1497,9 @@ async function matchRow(r){
   const ck=n.key+"|"+city.toUpperCase();
   if(!impCache.has(ck)){
     const srcs=pickSources(city),kw=keyword(street);
-    let cands=await candQuery(srcs,n.num,kw);let best=pickBest(cands,n,city);
-    if(!best&&kw&&kw.includes(" ")){const w=kw.split(" ").sort((a,b)=>b.length-a.length)[0];best=pickBest(await candQuery(srcs,n.num,w),n,city);}
-    if(!best&&srcs.length<SOURCES.length)best=pickBest(await candQuery(SOURCES,n.num,kw),n,city);
+    let cands=await candQuery(srcs,n.num,kw,city);let best=pickBest(cands,n,city);
+    if(!best&&kw&&kw.includes(" ")){const w=kw.split(" ").sort((a,b)=>b.length-a.length)[0];best=pickBest(await candQuery(srcs,n.num,w,city),n,city);}
+    if(!best&&srcs.length<SOURCES.length)best=pickBest(await candQuery(SOURCES,n.num,kw,city),n,city);
     impCache.set(ck,best||null);
   }
   r.feat=impCache.get(ck);r.status=r.feat?(customers[r.feat.properties.pid]?"exists":"ok"):"none";}
