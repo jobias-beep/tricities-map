@@ -1,7 +1,7 @@
 // Home-screen app helper. Keeps a copy of the map page and its libraries so the app
 // opens fast and still opens with a weak signal. Customer data (Supabase), map tiles
 // and property-line lookups always go to the network and are never stored here.
-const VERSION = "prestige-map-v2";
+const VERSION = "prestige-map-v3";
 const SHELL = ["./", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 const LIB_HOSTS = ["unpkg.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "fonts.googleapis.com", "fonts.gstatic.com"];
 

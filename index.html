@@ -246,6 +246,26 @@ body.dragging::after{content:"Drop your spreadsheet to import customers";positio
 .row .act{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .row .act .btn{padding:6px 10px;font-size:12.5px}
 .daylbl{font-size:12.5px;font-weight:700;color:var(--ink-2);margin:4px 2px 0}
+.tg.ok{background:#e3f5ea;color:#1c7a47}
+.tg.book{background:#e8effc;color:#1b4fae}
+.visit .tools{grid-column:1/-1;display:flex;gap:4px 12px;flex-wrap:wrap;align-items:center}
+.visit .tools .lnk{font-size:12px}
+.phs{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
+.phs a{display:block;width:64px;height:64px;border-radius:6px;overflow:hidden;background:var(--wash);border:1px solid var(--rule)}
+.phs img{width:100%;height:100%;object-fit:cover;display:block}
+.hint{font-size:12px;color:var(--ink-3);margin-top:4px}
+.mrow{display:grid;grid-template-columns:5.2em 1fr auto;gap:8px;align-items:center;font-size:13px;font-variant-numeric:tabular-nums}
+.mrow .bar{height:10px;border-radius:5px;background:var(--wash);position:relative;overflow:hidden}
+.mrow .bar i{position:absolute;inset:0 auto 0 0;background:#9bbcf2;border-radius:5px}
+.mrow .bar b{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:5px}
+.mrow .n{color:var(--ink-2);text-align:right;white-space:nowrap}
+.mlegend{display:flex;gap:12px;font-size:12px;color:var(--ink-3);align-items:center}
+.mlegend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.kv{display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;font-size:13px;font-variant-numeric:tabular-nums}
+.kv span:nth-child(3n+2),.kv span:nth-child(3n){text-align:right}
+.kv .h{color:var(--ink-3);font-size:11.5px;font-weight:600}
+#msgText{width:100%;min-height:220px;font:13px/1.5 var(--f-mono);resize:vertical}
+.msgbody{padding:14px 18px;overflow:auto;display:flex;flex-direction:column;gap:10px}
 @media (max-width:820px){
   :root{--railw:64px}
   #rail{top:auto;bottom:10px;left:10px;right:10px;width:auto;height:auto;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:6px}
@@ -380,8 +400,19 @@ body.dragging::after{content:"Drop your spreadsheet to import customers";positio
       <div class="grp">Who's using this device</div>
       <p style="font-size:13px">Visits you log here are marked as done by this person, and Coming up starts on their stops.</p>
       <div class="f"><label for="meName">Your name</label><input type="text" id="meName" list="teamList" placeholder="e.g. Jordan" autocomplete="off"><datalist id="teamList"></datalist></div>
+      <div class="grp">Texts to customers</div>
+      <p style="font-size:13px">Used in reminder texts, receipts, balance texts and review requests. Shared with everyone on the customer list.</p>
+      <div class="f"><label for="bizName">Business name</label><input type="text" id="bizName" placeholder="e.g. Prestige Pest Control"></div>
+      <div class="f"><label for="bizPhone">Business phone</label><input type="text" id="bizPhone" placeholder="(509) 555-0100"></div>
+      <div class="f"><label for="bizPay">Card payment link</label><input type="url" id="bizPay" placeholder="https://square.link/u/… or https://buy.stripe.com/…"><div class="hint">Make a payment link in Square, Stripe or PayPal and paste it here. It's added to receipts and balance texts when someone owes.</div></div>
+      <div class="f"><label for="bizReview">Google review link</label><input type="url" id="bizReview" placeholder="https://g.page/r/…/review"><div class="hint">In Google Business Profile, choose <b>Ask for reviews</b> and copy the link.</div></div>
+      <div class="f"><label for="bizRemind">Reminder text</label><textarea id="bizRemind"></textarea></div>
+      <div class="f"><label for="bizReviewTxt">Review request text</label><textarea id="bizReviewTxt"></textarea><div class="hint">You can use {name}, {business}, {day}, {address}, {review} and {phone}.</div></div>
+      <div class="btns"><button class="btn" id="bizSave" type="button">Save</button></div>
       <div class="grp">Shared customer list</div>
       <div id="syncBox"></div>
+      <div class="grp">Photos on visits</div>
+      <p style="font-size:13px" id="photoNote">Photos are stored with the shared customer list, so you need to be signed in. They need a one-time setup step in Supabase: run <b>supabase/photos.sql</b> in the SQL Editor.</p>
       <div class="grp">Import customers</div>
       <div class="drop" id="dropZone" role="button" tabindex="0" aria-label="Choose a spreadsheet to import">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4"/></svg>
@@ -441,6 +472,13 @@ body.dragging::after{content:"Drop your spreadsheet to import customers";positio
 <div id="zoomHint" class="pillmsg">Zoom in to see property lines</div>
 <div id="loadMsg" class="pillmsg" hidden>Loading property lines…</div>
 <div id="modeBar" hidden><span id="modeTxt"></span><button class="btn red" id="modeAct" type="button" hidden></button><button class="btn ghost" id="modeCancel" type="button">Done</button></div>
+<div id="msgModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="msgTitle">
+  <div class="modal-card card" style="width:min(520px,100%)">
+    <header><button class="close" id="msgClose" type="button" aria-label="Close">×</button><h2 id="msgTitle">Receipt</h2><p id="msgSub"></p></header>
+    <div class="msgbody"><label for="msgText" class="hint" style="margin:0">You can edit this before sending.</label><textarea id="msgText"></textarea></div>
+    <footer id="msgFoot"></footer>
+  </div>
+</div>
 <div id="importModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="impTitle">
   <div class="modal-card card">
     <header><button class="close" id="impClose" type="button" aria-label="Close">×</button><h2 id="impTitle">Review import</h2><p id="impSum"></p></header>
@@ -539,7 +577,12 @@ const parseDay=s=>{if(!s)return null;const[y,m,d]=s.split("-").map(Number);retur
 const fmtDay=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric",year:new Date(t).getFullYear()!==new Date().getFullYear()?"numeric":undefined});
 const isoDay=t=>{const d=new Date(t);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
 function statusOf(c){
-  const last=parseDay(c.last),plan=PLANS[c.plan]||PLANS.quarterly;
+  const last=parseDay(c.last),plan=PLANS[c.plan]||PLANS.quarterly,appt=parseDay(c.appt);
+  // A booked date beats the plan until a visit is logged on or after it
+  if(appt&&(!last||appt>last)){const left=Math.round((appt-today())/DAY);
+    if(left<0)return{key:"over",label:`${-left}d overdue`,next:appt,booked:true};
+    if(left<=7)return{key:"due",label:left===0?"Booked today":`Booked in ${left}d`,next:appt,booked:true};
+    return{key:"ok",label:"Booked "+fmtDay(appt),next:appt,booked:true};}
   if(!last)return{key:"new",label:"New",next:null};
   if(!plan.days)return{key:"done",label:"Done",next:null};
   const next=last+plan.days*DAY,left=Math.round((next-today())/DAY);
@@ -560,7 +603,95 @@ const cleanMoney=v=>{const n=parseFloat(String(v??"").replace(/[^0-9.]/g,""));re
 const money2=v=>"$"+(+v||0).toLocaleString(undefined,{minimumFractionDigits:(+v)%1?2:0,maximumFractionDigits:2});
 const vid=()=>"V-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const owedOf=c=>(c.visits||[]).filter(v=>!v.paid&&+v.price>0).reduce((s,v)=>s+(+v.price),0);
-function addVisit(pid,v){const c=customers[pid];c.visits=[v,...(c.visits||[])].sort((a,b)=>b.date.localeCompare(a.date));if(!c.last||v.date>c.last)c.last=v.date;}
+function addVisit(pid,v){const c=customers[pid];c.visits=[v,...(c.visits||[])].sort((a,b)=>b.date.localeCompare(a.date));if(!c.last||v.date>c.last)c.last=v.date;
+  if(c.appt&&v.date>=isoDay(parseDay(c.appt)-7*DAY))c.appt="";}
+
+/* ---------- Texts to customers: reminders, receipts, balances, reviews ---------- */
+const BIZ="__biz";
+const BIZ_DEF={name:"Prestige",phone:"",payLink:"",reviewLink:"",remind:"Hi {name}, this is {business}. Just a reminder that we're coming {day} for your pest control service. Reply here if that day doesn't work.",reviewTxt:"Hi {name}, thanks for having {business} out! If you were happy with the service, a quick Google review helps us a lot: {review}"};
+function biz(){const b=(typeof groups!=="undefined"&&groups[BIZ])||{};const o={...BIZ_DEF};Object.keys(BIZ_DEF).forEach(k=>{if(b[k])o[k]=b[k];});return o;}
+const firstName=c=>{const n=String(c.name||"").trim();if(!n)return "there";const w=n.split(/\s+/)[0];return /^(mr|mrs|ms|dr)\.?$/i.test(w)?n:w;};
+function fillTpl(t,c,extra){const b=biz();const v={name:firstName(c),business:b.name,phone:b.phone,review:b.reviewLink,pay:b.payLink,address:titleCase(c.info&&c.info.address||""),...(extra||{})};
+  return String(t).replace(/\{(\w+)\}/g,(m,k)=>v[k]!==undefined?v[k]:m);}
+const isApple=/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+const smsHref=(phone,body)=>"sms:"+digits(phone)+(body?(isApple?"&":"?")+"body="+encodeURIComponent(body):"");
+function dayWords(t){const d=Math.round((t-today())/DAY);const dl=new Date(t).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
+  return d===0?"today":d===1?"tomorrow ("+dl+")":"on "+dl;}
+const remindText=(c,st)=>fillTpl(biz().remind,c,{day:st&&st.next?dayWords(st.next):"soon"});
+const reviewText=c=>fillTpl(biz().reviewTxt,c);
+function balanceText(c){const b=biz(),owed=owedOf(c);const un=(c.visits||[]).filter(v=>!v.paid&&+v.price>0).map(v=>fmtDay(parseDay(v.date)));
+  return `Hi ${firstName(c)}, this is ${b.name}. You have a balance of ${money2(owed)} for pest control service on ${un.join(", ")}.`+(b.payLink?` You can pay by card here: ${b.payLink}`:"")+(c.pay&&c.pay!=="Invoice"?` ${b.payLink?"Or":"You can"} pay by ${c.pay} as usual.`:"")+" Thank you!";}
+function receiptText(pid,v){const c=customers[pid],b=biz(),st=statusOf(c);
+  const L=[`${b.name}: service receipt`,fmtDay(parseDay(v.date)),"",titleCase(c.info.address||"")];
+  if(c.name)L.push("For: "+c.name);
+  L.push("","Service: pest control"+((PLANS[c.plan]||{}).days?` (${PLANS[c.plan].label.toLowerCase()} plan)`:""));
+  if(v.by)L.push("Technician: "+v.by);
+  if(v.products)L.push("Products applied: "+v.products);
+  if(v.notes)L.push("Notes: "+v.notes);
+  if(+v.price>0){L.push("",`Amount: ${money2(v.price)}${v.paid?" (paid, thank you)":" (due)"}`);
+    if(!v.paid&&b.payLink)L.push("Pay by card: "+b.payLink);}
+  const owed=owedOf(c);if(owed>0&&(v.paid||owed>+v.price))L.push(`Total balance on your account: ${money2(owed)}`);
+  if(st.next&&st.next>parseDay(v.date))L.push("","Next service: "+new Date(st.next).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}));
+  L.push("",`Thank you for choosing ${b.name}!`+(b.phone?` Questions? Call or text ${b.phone}.`:""));
+  return L.join("\n");}
+// One dialog for every message: edit, then text, email or copy it
+function openMsg(title,sub,text,c,opts){opts=opts||{};const m=$("#msgModal"),ta=$("#msgText"),foot=$("#msgFoot");
+  $("#msgTitle").textContent=title;$("#msgSub").textContent=sub||"";ta.value=text;foot.replaceChildren();
+  const mk=(tag,cls,label)=>{const e=document.createElement(tag);e.className="btn "+cls;e.textContent=label;if(tag==="a")e.style.textDecoration="none";else e.type="button";foot.appendChild(e);return e;};
+  let sms=null,mail=null;
+  if(c.phone){sms=mk("a","","Text it");sms.onclick=()=>{opts.onSend&&opts.onSend("text");setTimeout(()=>{m.hidden=true;},300);};}
+  mail=mk("a",c.phone?"sec2":"","Email it");mail.onclick=()=>{opts.onSend&&opts.onSend("email");setTimeout(()=>{m.hidden=true;},300);};
+  const cp=mk("button","sec2","Copy");cp.onclick=async()=>{try{await navigator.clipboard.writeText(ta.value);toast("Copied");}catch(e){ta.select();document.execCommand&&document.execCommand("copy");toast("Copied");}};
+  (opts.extra||[]).forEach(x=>{const e=mk("button","sec2",x.label);e.onclick=x.fn;});
+  const sp=document.createElement("span");sp.style.flex="1";foot.appendChild(sp);
+  const cl=mk("button","sec2","Close");cl.onclick=()=>{m.hidden=true;};
+  const upd=()=>{if(sms)sms.href=smsHref(c.phone,ta.value);mail.href="mailto:"+encodeURIComponent(c.email||"")+"?subject="+encodeURIComponent(opts.subject||title)+"&body="+encodeURIComponent(ta.value);};
+  ta.oninput=upd;upd();
+  if(!c.phone){const n=document.createElement("span");n.className="hint";n.textContent="Add a phone number on the card to text this.";foot.insertBefore(n,sp);}
+  m.hidden=false;setTimeout(()=>ta.focus(),30);}
+$("#msgClose").onclick=()=>{$("#msgModal").hidden=true;};
+$("#msgModal").addEventListener("click",e=>{if(e.target.id==="msgModal")e.currentTarget.hidden=true;});
+function showReceipt(pid,vidv){const c=customers[pid],v=(c&&c.visits||[]).find(x=>x.id===vidv);if(!v)return;
+  const extra=[];if(c.phone)extra.push({label:"Ask for a review",fn:()=>askReview(pid,vidv)});
+  openMsg("Receipt",`${titleCase(c.info.address||"")} · ${fmtDay(parseDay(v.date))}`,receiptText(pid,v),c,{subject:`${biz().name} receipt for ${fmtDay(parseDay(v.date))}`,extra,
+    onSend:()=>{v.receipt=isoDay(Date.now());persist();if(selected===pid)select(pid);}});}
+function askReview(pid,vidv){const c=customers[pid];if(!c)return;
+  if(!biz().reviewLink){toast("Add your Google review link in Settings first",{label:"Open Settings",fn:()=>{$("#msgModal").hidden=true;openDrawer("settings");setTimeout(()=>$("#bizReview").focus(),60);}});return;}
+  const v=(c.visits||[]).find(x=>x.id===vidv)||(c.visits||[])[0];
+  openMsg("Ask for a review",titleCase(c.info.address||""),reviewText(c),c,{subject:`Thanks from ${biz().name}`,
+    onSend:()=>{c.reviewAsked=isoDay(Date.now());if(v)v.review=c.reviewAsked;persist();if(selected===pid)select(pid);if(view==="sched")renderSched();}});}
+function showRemind(pid){const c=customers[pid],st=statusOf(c);
+  openMsg("Visit reminder",`${titleCase(c.info.address||"")}${st.next?" · "+fmtDay(st.next):""}`,remindText(c,st),c,{subject:`${biz().name} visit reminder`,
+    onSend:()=>{c.reminded=st.next?isoDay(st.next):isoDay(Date.now());persist();if(view==="sched")renderSched();if(selected===pid)select(pid);}});}
+function showBalance(pid){const c=customers[pid];
+  openMsg("Balance text",`${titleCase(c.info.address||"")} · owes ${money2(owedOf(c))}`,balanceText(c),c,{subject:`${biz().name} balance`});}
+
+/* ---------- Photos on visits (Supabase Storage, bucket visit-photos) ---------- */
+const PH_BUCKET="visit-photos";const phCache=new Map();
+function shrinkPhoto(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{const M=1600,k=Math.min(1,M/Math.max(img.naturalWidth,img.naturalHeight));const cv=document.createElement("canvas");cv.width=Math.round(img.naturalWidth*k);cv.height=Math.round(img.naturalHeight*k);
+    cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(url);cv.toBlob(b=>b?res(b):rej(new Error("photo")),"image/jpeg",0.82);};
+  img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("That file isn't a photo this browser can read."));};img.src=url;});}
+function photoErr(e){const m=String(e&&(e.message||e.error||e.statusCode)||e);
+  if(/sign/i.test(m))return "Sign in under Settings to add photos.";
+  if(/bucket|not found|404/i.test(m))return "Photos aren't switched on yet. Run supabase/photos.sql in Supabase once (see Settings).";
+  if(/row-level|policy|403|unauthor/i.test(m))return "Supabase refused the photo. Run supabase/photos.sql again to set photo permissions.";
+  return "Couldn't upload the photo. Check your signal and try again.";}
+async function addPhotos(pid,vidv,files){files=[...(files||[])].filter(f=>f&&f.size);if(!files.length)return;
+  if(!syncOn()){toast("Sign in under Settings to add photos.");return;}
+  toast(`Uploading ${files.length} photo${files.length>1?"s":""}…`);
+  const safe=pid.replace(/[^A-Za-z0-9_-]/g,"_"),paths=[];let err=null;
+  for(const [i,f] of files.entries()){try{const blob=await shrinkPhoto(f);const path=`${safe}/${vidv}/${Date.now().toString(36)}${i}.jpg`;
+    const{error}=await sb.storage.from(PH_BUCKET).upload(path,blob,{contentType:"image/jpeg",upsert:false});if(error)throw error;paths.push(path);}catch(e){console.warn("photo",e);err=e;}}
+  const c=customers[pid],v=c&&(c.visits||[]).find(x=>x.id===vidv);
+  if(v&&paths.length){v.photos=[...(v.photos||[]),...paths];persist();if(selected===pid)select(pid);}
+  toast(err?photoErr(err):`${paths.length} photo${paths.length>1?"s":""} added`);}
+async function loadThumbs(root){const els=[...root.querySelectorAll("img[data-ph]")];if(!els.length||!sb)return;
+  const need=[...new Set(els.map(e=>e.dataset.ph))].filter(p=>!(phCache.get(p)&&phCache.get(p).t>Date.now()));
+  if(need.length){try{const{data,error}=await sb.storage.from(PH_BUCKET).createSignedUrls(need,3600);if(error)throw error;
+    (data||[]).forEach(d=>{if(d.signedUrl)phCache.set(d.path,{u:d.signedUrl,t:Date.now()+3300e3});});}catch(e){console.warn("thumbs",e);}}
+  els.forEach(e=>{const h=phCache.get(e.dataset.ph);if(h){e.src=h.u;e.parentElement.href=h.u;}else e.alt="Photo unavailable";});}
+function rmPhotos(paths){if(sb&&paths&&paths.length)sb.storage.from(PH_BUCKET).remove(paths).catch(()=>{});}
 
 /* ---------- Map ---------- */
 const EMPTY={type:"FeatureCollection",features:[]};
@@ -788,7 +919,10 @@ function renderCard(p,geom){
         <button class="btn ${c.urgent?"red":"warn"}" id="cUrgBtn" type="button" aria-pressed="${!!c.urgent}">${c.urgent?"Urgent · click to clear":"Mark as urgent"}</button>
         <div class="two" id="cUrgFields"${c.urgent?"":" hidden"}><div class="f"><label for="cUrgNote">What's urgent</label><input id="cUrgNote" type="text" value="${esc(c.urgentNote||"")}" placeholder="e.g. Wasp nest by front door"></div><div class="f"><label for="cUrgBy">Needed by</label><input id="cUrgBy" type="date" value="${esc(c.urgentBy||"")}"></div></div>
       </div>
-      <div class="next"><span>Next visit</span><b>${esc(nextTxt)}</b></div>
+      <div class="next"><span>Next visit${st.booked?" (booked)":""}</span><b>${esc(nextTxt)}</b></div>
+      <div class="two"><div class="f"><label for="cAppt">Book a date</label><input id="cAppt" type="date" value="${esc(c.appt||"")}"></div>
+      <div class="f" style="align-self:end">${c.phone&&st.next?`<button class="btn sec2" id="cRemind" type="button" style="width:100%">Text reminder${c.reminded&&c.reminded===isoDay(st.next)?" again":""}</button>`:""}</div></div>
+      <div class="hint" style="margin-top:-4px">${c.appt?"Booked dates win over the plan until you log that visit.":`Leave empty and the next visit is ${esc((PLANS[c.plan]||PLANS.quarterly).label.toLowerCase())} after the last one.`}${c.reminded&&st.next&&c.reminded===isoDay(st.next)?" Reminder already sent for this visit.":""}</div>
       ${st.key!=="done"?`<a class="vbtn" href="${esc(gcalUrl(c,p,visitDay(st)))}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Add ${st.next&&st.key!=="over"?"next visit":"a visit"} to Google Calendar ↗</a>`:""}
       <div class="owed${owedOf(c)?"":" zero"}" id="cOwed"${(c.visits||[]).some(v=>+v.price>0)?"":" hidden"}><span>${owedOf(c)?"Owes":"All paid up"}</span><b>${owedOf(c)?money2(owedOf(c)):""}</b></div>
       <div class="btns"><button class="btn" id="logVisit" type="button">Log a visit</button><button class="btn sec2" id="svcToday" type="button">Serviced today</button></div>
@@ -797,12 +931,14 @@ function renderCard(p,geom){
         <div class="f"><label for="vBy">Done by</label><select id="vBy">${optList(teamNames(),me||c.tech||"","Not set")}</select></div></div>
         <div class="f"><label for="vProd">Products used</label><input id="vProd" type="text" placeholder="e.g. Bifen perimeter, Advion gel in kitchen"></div>
         <div class="f"><label for="vNotes">What you did / saw</label><textarea id="vNotes" placeholder="e.g. Treated perimeter and garage, ant trail by back slider"></textarea></div>
+        <div class="f"><label for="vPhotos">Photos</label><input id="vPhotos" type="file" accept="image/*" multiple></div>
         <div class="two"><div class="f"><label for="vPrice">Charged ($)</label><input id="vPrice" type="text" inputmode="decimal" value="${esc(c.price||"")}" placeholder="0"></div>
         <div class="f"><label class="check" for="vPaid" style="margin-top:22px"><input type="checkbox" id="vPaid">Paid already</label></div></div>
         <div class="btns"><button class="btn" id="vSave" type="button">Save visit</button><button class="btn sec2" id="vCancel" type="button">Cancel</button></div>
       </div>
       <div class="f"><label for="cName">Customer name</label><input id="cName" type="text" value="${esc(c.name)}" placeholder="e.g. Maria Lopez"></div>
-      <div class="f"><label for="cPhone">Phone</label><input id="cPhone" type="text" value="${esc(c.phone)}" placeholder="(509) 555-0100"></div>
+      <div class="two"><div class="f"><label for="cPhone">Phone</label><input id="cPhone" type="text" value="${esc(c.phone)}" placeholder="(509) 555-0100"></div>
+      <div class="f"><label for="cEmail">Email</label><input id="cEmail" type="email" value="${esc(c.email||"")}" placeholder="for receipts"></div></div>
       <div class="two"><div class="f"><label for="cAcct">Account type</label><select id="cAcct">${optList(ACCT_TYPES,c.acct,"Not set")}</select></div>
       <div class="f"><label for="cPay">Pays by</label><select id="cPay">${optList(PAY,c.pay,"Not set")}</select></div></div>
       <div class="f"><label class="check" for="cPet"><input type="checkbox" id="cPet"${c.pet?" checked":""}>${PAW}Has pets</label><input id="cPetNote" type="text" value="${esc(c.petNote||"")}" placeholder="e.g. 2 dogs in backyard, keep gate shut"${c.pet?"":" hidden"}></div>
@@ -817,7 +953,8 @@ function renderCard(p,geom){
       ${(c.visits||[]).length?`<ul class="vlist">${c.visits.map(v=>`<li class="visit" data-id="${esc(v.id)}"><span class="d">${esc(fmtDay(parseDay(v.date)))}${v.by?` <span class="by">· ${esc(v.by)}</span>`:""}</span>
         <span class="amt">${+v.price>0?esc(money2(v.price))+` <button type="button" class="paybtn ${v.paid?"paid":"unpaid"}" data-act="pay">${v.paid?"Paid":"Unpaid"}</button>`:""}</span>
         ${v.products?`<span class="x"><b>Products:</b> ${esc(v.products)}</span>`:""}${v.notes?`<span class="x">${esc(v.notes)}</span>`:""}
-        <span class="x"><button class="lnk" type="button" data-act="del" style="font-size:12px">Delete visit</button></span></li>`).join("")}</ul>`
+        ${(v.photos||[]).length?`<span class="phs">${v.photos.map(ph=>`<a target="_blank" rel="noopener"><img data-ph="${esc(ph)}" alt="Visit photo" loading="lazy"></a>`).join("")}</span>`:""}
+        <span class="tools"><button class="lnk" type="button" data-act="receipt">${v.receipt?"Receipt sent · send again":"Send receipt"}</button>${c.phone?`<button class="lnk" type="button" data-act="review">${v.review?"Review asked":"Ask for review"}</button>`:""}<button class="lnk" type="button" data-act="photo">Add photos</button><input type="file" accept="image/*" multiple hidden data-file><button class="lnk" type="button" data-act="del" style="color:var(--ink-3)">Delete visit</button></span></li>`).join("")}</ul>`
         :`<p style="color:var(--ink-3);font-size:13px">No visits logged yet. Press <b>Log a visit</b> after each service to keep a full history here.</p>`}</div>`;
   }
   $("#propBody").innerHTML=h;
@@ -827,7 +964,7 @@ function renderCard(p,geom){
   const of=$("#ownerFind");if(of)of.onclick=()=>{ownTerm=p.owner;ownHits=[];activeGroup=c&&c.group&&groups[c.group]?c.group:null;openDrawer("groups");const f=document.querySelector("#grpBody form.savebox");f&&f.requestSubmit();};
   $("#svBtn").onclick=()=>{if(!gkey){openStreetView(lat,lng);return;}svOpen=!svOpen;renderCard(p,geom);};
   if(!c){$("#addCust").onclick=()=>addCustomer(p.pid);return;}
-  const read=()=>({tech:readTech(),price:cleanMoney($("#cPrice").value),name:$("#cName").value.trim(),phone:$("#cPhone").value.trim(),plan:$("#cPlan").value,last:$("#cLast").value,notes:$("#cNotes").value.trim(),group:readGroup(),acct:$("#cAcct").value,pay:$("#cPay").value,pet:$("#cPet").checked,petNote:$("#cPetNote").value.trim(),urgentNote:$("#cUrgNote").value.trim(),urgentBy:$("#cUrgBy").value});
+  const read=()=>({tech:readTech(),price:cleanMoney($("#cPrice").value),name:$("#cName").value.trim(),phone:$("#cPhone").value.trim(),email:$("#cEmail").value.trim(),appt:$("#cAppt").value,plan:$("#cPlan").value,last:$("#cLast").value,notes:$("#cNotes").value.trim(),group:readGroup(),acct:$("#cAcct").value,pay:$("#cPay").value,pet:$("#cPet").checked,petNote:$("#cPetNote").value.trim(),urgentNote:$("#cUrgNote").value.trim(),urgentBy:$("#cUrgBy").value});
   $("#cPet").onchange=e=>{$("#cPetNote").hidden=!e.target.checked;if(e.target.checked)$("#cPetNote").focus();};
   const gs=$("#cGroup");gs.onchange=()=>{$("#cGroupNew").hidden=gs.value!=="__new";if(gs.value==="__new")$("#cGroupNew").focus();};
   const after=m=>{persist();renderCustomers();renderCard(p,geom);renderList();if(view==="sched")renderSched();if(view==="pay")renderPay();toast(m);};
@@ -835,17 +972,25 @@ function renderCard(p,geom){
   const ts=$("#cTech");ts.onchange=()=>{$("#cTechNew").hidden=ts.value!=="__new";if(ts.value==="__new")$("#cTechNew").focus();};
   const logIt=v=>{const was=customers[p.pid].urgent;Object.assign(customers[p.pid],read());addVisit(p.pid,v);
     if(v.date>=isoDay(today()-7*DAY))Object.assign(customers[p.pid],{urgent:false,urgentNote:"",urgentBy:""});
-    after(was&&!customers[p.pid].urgent?"Visit logged. Urgent flag cleared.":"Visit logged");};
+    const ns=statusOf(customers[p.pid]);
+    persist();renderCustomers();renderCard(p,geom);renderList();if(view==="sched")renderSched();if(view==="pay")renderPay();
+    toast((was&&!customers[p.pid].urgent?"Visit logged. Urgent cleared.":"Visit logged.")+(ns.next?" Next visit "+fmtDay(ns.next)+".":""),{label:"Send receipt",fn:()=>showReceipt(p.pid,v.id)});};
   $("#svcToday").onclick=()=>{const c2=customers[p.pid];logIt({id:vid(),date:isoDay(Date.now()),by:me||readTech()||"",products:"",notes:"",price:cleanMoney($("#cPrice").value),paid:false});};
   $("#logVisit").onclick=()=>{$("#visitForm").hidden=false;$("#logVisit").parentElement.hidden=true;$("#vPrice").value=$("#cPrice").value;setTimeout(()=>$("#vProd").focus(),30);};
   $("#vCancel").onclick=()=>{$("#visitForm").hidden=true;$("#logVisit").parentElement.hidden=false;};
   $("#vSave").onclick=()=>{const d=$("#vDate").value;if(!d){$("#vDate").focus();return;}
-    logIt({id:vid(),date:d,by:$("#vBy").value,products:$("#vProd").value.trim(),notes:$("#vNotes").value.trim(),price:cleanMoney($("#vPrice").value),paid:$("#vPaid").checked});};
+    const files=[...($("#vPhotos").files||[])];const v={id:vid(),date:d,by:$("#vBy").value,products:$("#vProd").value.trim(),notes:$("#vNotes").value.trim(),price:cleanMoney($("#vPrice").value),paid:$("#vPaid").checked};
+    logIt(v);if(files.length)addPhotos(p.pid,v.id,files);};
+  const rb=$("#cRemind");if(rb)rb.onclick=()=>{Object.assign(customers[p.pid],read());persist();showRemind(p.pid);};
+  loadThumbs($("#propBody"));
   $("#propBody").querySelectorAll(".visit [data-act]").forEach(b=>{const id=b.closest(".visit").dataset.id;
     b.onclick=()=>{const c2=customers[p.pid],v=(c2.visits||[]).find(x=>x.id===id);if(!v)return;
       if(b.dataset.act==="pay"){Object.assign(c2,read());v.paid=!v.paid;after(v.paid?"Marked paid":"Marked unpaid");return;}
+      if(b.dataset.act==="receipt"){Object.assign(c2,read());persist();showReceipt(p.pid,id);return;}
+      if(b.dataset.act==="review"){Object.assign(c2,read());persist();askReview(p.pid,id);return;}
+      if(b.dataset.act==="photo"){const fi=b.parentElement.querySelector("[data-file]");fi.onchange=()=>{const fs=[...fi.files];fi.value="";addPhotos(p.pid,id,fs);};fi.click();return;}
       if(!b.dataset.arm){b.dataset.arm="1";b.textContent="Tap again to delete";b.style.color="var(--s-over)";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="Delete visit";b.style.color="";}},4000);return;}
-      Object.assign(c2,read());c2.visits=c2.visits.filter(x=>x.id!==id);after("Visit deleted");};});
+      Object.assign(c2,read());rmPhotos(v.photos);c2.visits=c2.visits.filter(x=>x.id!==id);after("Visit deleted");};});
   $("#cUrgBtn").onclick=()=>{const on=!customers[p.pid].urgent;Object.assign(customers[p.pid],read(),{urgent:on},on?{}:{urgentNote:"",urgentBy:""});after(on?"Marked urgent":"Urgent cleared");if(on)setTimeout(()=>{const n=$("#cUrgNote");n&&n.focus();},60);};
   const rm=$("#rmCust");rm.onclick=()=>{
     if(rm.dataset.arm){const saved={[p.pid]:customers[p.pid]};delete customers[p.pid];persist();renderCustomers();renderList();select(null);
@@ -940,23 +1085,32 @@ function renderSched(){
   const over=rest.filter(x=>x.st.key==="over").sort((a,b)=>a.st.next-b.st.next);
   const week=rest.filter(x=>x.st.next&&daysTo(x)>=0&&daysTo(x)<=7).sort((a,b)=>a.st.next-b.st.next);
   const next=rest.filter(x=>x.st.next&&daysTo(x)>7&&daysTo(x)<=14).sort((a,b)=>a.st.next-b.st.next);
+  const later=rest.filter(x=>x.st.next&&daysTo(x)>14&&daysTo(x)<=31).sort((a,b)=>a.st.next-b.st.next);
+  const askFrom=isoDay(t0-5*DAY);
+  const toReview=all.filter(x=>x.c.phone&&x.c.last&&x.c.last>=askFrom&&!(x.c.reviewAsked&&x.c.reviewAsked>=isoDay(t0-180*DAY))).sort((a,b)=>b.c.last.localeCompare(a.c.last));
   const fresh=rest.filter(x=>x.st.key==="new");
   const now=urgent.length+over.length+week.length;
   $("#schedCount").textContent=now?`${now} stop${now>1?"s":""} this week`:"";
   if(!all.length){body.innerHTML=`<div class="empty">${Object.keys(customers).length?"Nobody is assigned to "+esc(schedWho)+" yet. Set <b>Assigned to</b> on a customer's card.":"<b>No customers yet.</b> Add properties first."}</div>`;return;}
-  const sec=(title,list,rightFn,byDay)=>{if(!list.length)return;const g=document.createElement("div");g.className="grp";g.textContent=`${title} · ${list.length}`;body.appendChild(g);
+  const sec=(title,list,rightFn,byDay,extraFn)=>{if(!list.length)return;const g=document.createElement("div");g.className="grp";g.textContent=`${title} · ${list.length}`;body.appendChild(g);
     let ul=null,lastDay=null;
     list.forEach(x=>{if(byDay){const dl=new Date(x.st.next).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});if(dl!==lastDay){lastDay=dl;const d=document.createElement("div");d.className="daylbl";d.textContent=daysTo(x)===0?"Today":daysTo(x)===1?"Tomorrow · "+dl:dl;body.appendChild(d);ul=null;}}
       if(!ul){ul=document.createElement("ul");ul.className="rows";body.appendChild(ul);}
-      ul.appendChild(custRow(x.pid,rightFn(x)));});};
+      const li=custRow(x.pid,rightFn(x),extraFn?extraFn(x):"");ul.appendChild(li);
+      const rb=li.querySelector("[data-remind]");if(rb)rb.onclick=()=>showRemind(x.pid);
+      const vb=li.querySelector("[data-review]");if(vb)vb.onclick=()=>askReview(x.pid);});};
+  const remindX=x=>{const sent=x.c.reminded&&x.st.next&&x.c.reminded===isoDay(x.st.next);
+    return `<span class="tags">${x.st.booked?'<span class="tg book">Booked</span>':""}${sent?'<span class="tg ok">Reminder sent</span>':""}</span>${x.c.phone?`<span class="act"><button class="btn sec2" type="button" data-remind>${sent?"Text again":"Text reminder"}</button></span>`:""}`;};
   sec("Urgent",urgent,x=>`<span class="pill p-urg">${esc(x.c.urgentBy?"By "+fmtDay(parseDay(x.c.urgentBy)):"Urgent")}</span>`);
   sec("Overdue",over,x=>`<span class="pill p-over">${esc(x.st.label)}</span>`);
-  sec("This week",week,x=>`<span class="pill p-due">${esc(x.st.label)}</span>`,true);
+  sec("This week",week,x=>`<span class="pill p-due">${esc(x.st.label)}</span>`,true,remindX);
   if(now){const b=document.createElement("div");b.className="btns";const r=document.createElement("button");r.className="btn";r.type="button";r.textContent=now>1?`Plan a route for these ${now} stops`:"Plan a route for this stop";
     r.onclick=()=>{routeSel.clear();[...urgent,...over,...week].forEach(x=>routeSel.add(x.pid));routeTouched=true;routeOut=null;drawRoute(null);openDrawer("route");};b.appendChild(r);body.appendChild(b);}
   else{const e=document.createElement("div");e.className="empty";e.innerHTML="<b>Nothing due this week.</b>";body.appendChild(e);}
-  sec("Next week",next,x=>`<span class="pill p-ok">${esc(fmtDay(x.st.next))}</span>`);
+  sec("Next week",next,x=>`<span class="pill p-ok">${esc(fmtDay(x.st.next))}</span>`,false,remindX);
+  sec("Later this month",later,x=>`<span class="pill p-ok">${esc(fmtDay(x.st.next))}</span>`,false,x=>x.st.booked?'<span class="tags"><span class="tg book">Booked</span></span>':"");
   sec("Never serviced",fresh,()=>`<span class="pill p-new">New</span>`);
+  sec("Ask for a review",toReview,x=>`<span class="when">${esc(fmtDay(parseDay(x.c.last)))}</span>`,false,()=>`<span class="act"><button class="btn sec2" type="button" data-review>Ask for a review</button></span>`);
 }
 
 /* ---------- Payments ---------- */
@@ -983,13 +1137,40 @@ function renderPay(){
     owing.forEach(x=>{const n=(x.c.visits||[]).filter(v=>!v.paid&&+v.price>0).length;const days=Math.round((today()-parseDay(x.oldest))/DAY);
       const li=custRow(x.pid,`<span class="amt" style="color:#b42318">${esc(money2(x.owed))}</span>`,
         `<span class="tags"><span class="tg">${n} unpaid visit${n>1?"s":""}</span><span class="tg${days>30?" owe":""}">Oldest ${esc(fmtDay(parseDay(x.oldest)))}${days>0?` · ${days}d ago`:""}</span>${x.c.pay?`<span class="tg">${esc(x.c.pay)}</span>`:""}</span>
-        <span class="act">${x.c.phone?`<a class="btn sec2" style="text-decoration:none" href="sms:${esc(digits(x.c.phone))}">Text</a><a class="btn sec2" style="text-decoration:none" href="tel:${esc(digits(x.c.phone))}">Call</a>`:""}<button class="btn" type="button" data-paid>Mark all paid</button></span>`);
+        <span class="act">${x.c.phone?`<button class="btn sec2" type="button" data-bal>Text balance</button><a class="btn sec2" style="text-decoration:none" href="tel:${esc(digits(x.c.phone))}">Call</a>`:""}<button class="btn" type="button" data-paid>Mark all paid</button></span>`);
+      const bb=li.querySelector("[data-bal]");if(bb)bb.onclick=()=>showBalance(x.pid);
       li.querySelector("[data-paid]").onclick=()=>{(customers[x.pid].visits||[]).forEach(v=>{if(+v.price>0)v.paid=true;});persist();renderList();renderPay();if(selected===x.pid)select(x.pid);toast("Marked paid");};
       ul.appendChild(li);});}
   const rec=visits.filter(v=>v.paid&&+v.price>0).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,15);
   if(rec.length){const g2=document.createElement("div");g2.className="grp";g2.textContent="Recently paid";body.appendChild(g2);
     const ul=document.createElement("ul");ul.className="rows";body.appendChild(ul);
     rec.forEach(v=>ul.appendChild(custRow(v.pid,`<span class="amt" style="color:#1c7a47">${esc(money2(v.price))}</span>`,`<span class="tags"><span class="tg">${esc(fmtDay(parseDay(v.date)))}${v.by?" · "+esc(v.by):""}</span></span>`)));}
+  renderSummary(body,all,visits);
+}
+/* Month-by-month business summary */
+function renderSummary(body,all,visits){
+  if(!visits.length)return;
+  const d0=new Date();const months=[];for(let i=5;i>=0;i--){const d=new Date(d0.getFullYear(),d0.getMonth()-i,1);months.push({k:d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"),l:d.toLocaleDateString(undefined,{month:"short",year:i>=d0.getMonth()+1?"2-digit":undefined})});}
+  const firstVisit={};all.forEach(x=>{const ds=(x.c.visits||[]).map(v=>v.date).sort();if(ds.length)firstVisit[x.pid]=ds[0].slice(0,7);});
+  months.forEach(m=>{const vs=visits.filter(v=>v.date.slice(0,7)===m.k);m.n=vs.length;m.billed=vs.reduce((s,v)=>s+(+v.price||0),0);m.paid=vs.filter(v=>v.paid).reduce((s,v)=>s+(+v.price||0),0);m.fresh=Object.values(firstVisit).filter(k=>k===m.k).length;});
+  const max=Math.max(1,...months.map(m=>m.billed));
+  const g=document.createElement("div");g.className="grp";g.textContent="Month by month";body.appendChild(g);
+  const box=document.createElement("div");box.style.cssText="display:flex;flex-direction:column;gap:8px";
+  box.innerHTML=`<div class="mlegend"><span><i style="background:var(--accent)"></i>Collected</span><span><i style="background:#9bbcf2"></i>Billed</span></div>`+
+    months.map(m=>`<div class="mrow"><span>${esc(m.l)}</span><span class="bar" title="${esc(money2(m.paid))} collected of ${esc(money2(m.billed))} billed"><i style="width:${(m.billed/max*100).toFixed(1)}%"></i><b style="width:${(m.paid/max*100).toFixed(1)}%"></b></span><span class="n">${esc(money2(m.billed))} · ${m.n} visit${m.n===1?"":"s"}${m.fresh?` · ${m.fresh} new`:""}</span></div>`).join("");
+  body.appendChild(box);
+  const mon=months[5].k,mName=new Date().toLocaleDateString(undefined,{month:"long"});
+  const by={};visits.filter(v=>v.date.slice(0,7)===mon).forEach(v=>{const k=v.by||"Not set";by[k]=by[k]||{n:0,b:0};by[k].n++;by[k].b+=+v.price||0;});
+  const people=Object.entries(by).sort((a,b)=>b[1].b-a[1].b);
+  if(people.length){const g2=document.createElement("div");g2.className="grp";g2.textContent=`${mName} by person`;body.appendChild(g2);
+    const kv=document.createElement("div");kv.className="kv";kv.innerHTML=`<span class="h">Who</span><span class="h">Visits</span><span class="h">Billed</span>`+people.map(([k,v])=>`<span>${esc(k)}</span><span>${v.n}</span><span>${esc(money2(v.b))}</span>`).join("");body.appendChild(kv);}
+  const since=isoDay(today()-90*DAY),city={};
+  all.forEach(x=>{const vs=(x.c.visits||[]).filter(v=>v.date>=since);if(!vs.length)return;const k=cityName(x.c);city[k]=city[k]||{n:0,b:0};city[k].n+=vs.length;city[k].b+=vs.reduce((s,v)=>s+(+v.price||0),0);});
+  const cities=Object.entries(city).sort((a,b)=>b[1].b-a[1].b||b[1].n-a[1].n);
+  if(cities.length){const g3=document.createElement("div");g3.className="grp";g3.textContent="Cities, last 90 days";body.appendChild(g3);
+    const kv=document.createElement("div");kv.className="kv";kv.innerHTML=`<span class="h">City</span><span class="h">Visits</span><span class="h">Billed</span>`+cities.map(([k,v])=>`<span>${esc(k)}</span><span>${v.n}</span><span>${esc(money2(v.b))}</span>`).join("");body.appendChild(kv);}
+  const active=all.filter(x=>{const st=statusOf(x.c);return st.key!=="done"&&x.c.last;}).length,lapsed=all.filter(x=>statusOf(x.c).key==="over"&&parseDay(x.c.last)&&statusOf(x.c).next<today()-30*DAY).length;
+  const p=document.createElement("p");p.className="hint";p.textContent=`${active} active customer${active===1?"":"s"}${lapsed?`, ${lapsed} more than a month overdue (may have dropped off)`:""}.`;body.appendChild(p);
 }
 
 /* ---------- Sections ---------- */
@@ -1318,11 +1499,11 @@ let groups=LS.get("tcpm.groups",{})||{};
 const GCOLORS=["#a855f7","#14b8a6","#f97316","#ec4899","#84cc16","#06b6d4","#eab308","#6366f1"];
 function saveGroups(){LS.set("tcpm.groups",groups);syncChanged();}
 function makeGroup(name,kind){const gid="G-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  groups[gid]={name,kind:kind||"Owner",contact:"",phone:"",notes:"",color:GCOLORS[Object.keys(groups).length%GCOLORS.length]};saveGroups();return gid;}
-function groupByName(name){const n=String(name).trim().toLowerCase();return Object.keys(groups).find(g=>groups[g].name.trim().toLowerCase()===n);}
+  groups[gid]={name,kind:kind||"Owner",contact:"",phone:"",notes:"",color:GCOLORS[Object.keys(groups).filter(g=>g!==BIZ).length%GCOLORS.length]};saveGroups();return gid;}
+function groupByName(name){const n=String(name).trim().toLowerCase();return Object.keys(groups).filter(g=>g!==BIZ).find(g=>groups[g].name.trim().toLowerCase()===n);}
 function membersOf(gid){return Object.keys(customers).filter(pid=>customers[pid].group===gid);}
 function gStats(gid){const st=membersOf(gid).map(pid=>statusOf(customers[pid]).key);return{n:st.length,over:st.filter(s=>s==="over").length,due:st.filter(s=>s==="due").length};}
-function groupFieldHtml(c){return `<div class="f"><label for="cGroup">Owner / property manager group</label><select id="cGroup"><option value="">No group</option>${Object.entries(groups).sort((a,b)=>a[1].name.localeCompare(b[1].name)).map(([g,v])=>`<option value="${g}"${c.group===g?" selected":""}>${esc(v.name)}</option>`).join("")}<option value="__new">+ New group…</option></select><input id="cGroupNew" type="text" placeholder="New group name, e.g. Columbia Rentals" hidden style="margin-top:6px"></div>`;}
+function groupFieldHtml(c){return `<div class="f"><label for="cGroup">Owner / property manager group</label><select id="cGroup"><option value="">No group</option>${Object.entries(groups).filter(([g])=>g!==BIZ).sort((a,b)=>a[1].name.localeCompare(b[1].name)).map(([g,v])=>`<option value="${g}"${c.group===g?" selected":""}>${esc(v.name)}</option>`).join("")}<option value="__new">+ New group…</option></select><input id="cGroupNew" type="text" placeholder="New group name, e.g. Columbia Rentals" hidden style="margin-top:6px"></div>`;}
 function readGroup(){const s=$("#cGroup");if(!s)return "";if(s.value==="__new"){const n=$("#cGroupNew").value.trim();if(!n)return "";return groupByName(n)||makeGroup(n,"Owner");}return s.value;}
 function showGroupOnMap(gid,force){const ms=membersOf(gid);if(!ms.length){if(force)toast("No properties in this group yet");return;}map.fitBounds(boundsOf(ms),{padding:fitPad(),maxZoom:18});}
 let activeGroup=null,ownTerm="",ownHits=[],ownSel=new Set(),ownBusy=false;
@@ -1338,7 +1519,7 @@ function renderGroups(){
       <div class="two"><select id="gKind" aria-label="Group type"><option>Owner</option><option>Property manager</option><option>Other</option></select><button class="btn" type="submit">Create group</button></div>`;
     f.onsubmit=e=>{e.preventDefault();const n=$("#gName").value.trim();if(!n){$("#gName").focus();return;}const ex=groupByName(n);activeGroup=ex||makeGroup(n,$("#gKind").value);renderGroups();toast(ex?"That group already exists":"Group created");};
     body.appendChild(f);
-    const ids=Object.keys(groups).sort((a,b)=>groups[a].name.localeCompare(groups[b].name));
+    const ids=Object.keys(groups).filter(g=>g!==BIZ).sort((a,b)=>groups[a].name.localeCompare(groups[b].name));
     if(!ids.length){const e=document.createElement("div");e.className="empty";e.innerHTML="<b>No groups yet.</b> Group properties that share an owner or property manager. Create one above, choose a group in any customer's card, or search county records by owner name below.";body.appendChild(e);}
     else{const h=document.createElement("div");h.className="grp";h.textContent="Your groups";body.appendChild(h);}
     ids.forEach(gid=>{const g=groups[gid],s=gStats(gid);const r=document.createElement("div");r.className="row";r.tabIndex=0;r.setAttribute("role","button");
@@ -1399,7 +1580,7 @@ function ownerBlock(body,gid){
   body.appendChild(box);
   const foot=document.createElement("div");foot.className="btns";let tgt=null;
   if(!gid){tgt=document.createElement("select");tgt.setAttribute("aria-label","Add to which group");
-    tgt.innerHTML=`<option value="__new">New group: ${esc(titleCase(ownTerm))}</option>`+Object.entries(groups).map(([g,v])=>`<option value="${g}">${esc(v.name)}</option>`).join("");foot.appendChild(tgt);}
+    tgt.innerHTML=`<option value="__new">New group: ${esc(titleCase(ownTerm))}</option>`+Object.entries(groups).filter(([g])=>g!==BIZ).map(([g,v])=>`<option value="${g}">${esc(v.name)}</option>`).join("");foot.appendChild(tgt);}
   foot.appendChild(add);body.appendChild(foot);updBtn();
   add.onclick=()=>{let g=gid;if(!g)g=tgt.value==="__new"?(groupByName(titleCase(ownTerm))||makeGroup(titleCase(ownTerm),"Owner")):tgt.value;
     let n=0;ownHits.forEach(ft=>{const pr=ft.properties;if(!ownSel.has(pr.pid))return;n++;
@@ -1710,7 +1891,7 @@ function onRemote(p){
   saveSnap();quietSave(new Set([r.kind]));sDirty.add(id);redraw();
 }
 function redraw(){clearTimeout(sDrawT);sDrawT=setTimeout(()=>{
-  renderCustomers();renderLots();renderList();if(view==="groups")renderGroups();if(view==="sched")renderSched();if(view==="pay")renderPay();
+  renderCustomers();renderLots();renderList();if(view==="groups")renderGroups();if(!$("#vSettings").contains(document.activeElement))renderBiz();if(view==="sched")renderSched();if(view==="pay")renderPay();
   if(selected&&sDirty.has(selected)){
     if(!featureFor(selected))select(null);
     else if($("#prop").contains(document.activeElement))toast("A teammate just updated this customer. Reopen the card to see it.");
@@ -1749,6 +1930,11 @@ function renderSync(){
     snap=emptySnap();saveSnap();quietSave(new Set(Object.keys(KINDS)));select(null);redraw();toast("Signed out");};
 }
 
+function renderBiz(){const b=biz();$("#bizName").value=b.name;$("#bizPhone").value=b.phone;$("#bizPay").value=b.payLink;$("#bizReview").value=b.reviewLink;$("#bizRemind").value=b.remind;$("#bizReviewTxt").value=b.reviewTxt;}
+$("#bizSave").onclick=()=>{const u=s=>{s=s.trim();return s&&!/^https?:\/\//i.test(s)?"https://"+s:s;};
+  groups[BIZ]={name:$("#bizName").value.trim()||BIZ_DEF.name,phone:$("#bizPhone").value.trim(),payLink:u($("#bizPay").value),reviewLink:u($("#bizReview").value),remind:$("#bizRemind").value.trim()||BIZ_DEF.remind,reviewTxt:$("#bizReviewTxt").value.trim()||BIZ_DEF.reviewTxt};
+  saveGroups();renderBiz();toast("Saved");};
+renderBiz();
 function renderMe(){$("#meName").value=me;$("#teamList").innerHTML=teamNames().map(n=>`<option value="${esc(n)}">`).join("");}
 $("#meName").onchange=e=>{me=e.target.value.trim();LS.set("tcpm.me",me);schedWho=null;renderMe();toast(me?`This device is set to ${me}`:"Name cleared");};
 renderMe();
